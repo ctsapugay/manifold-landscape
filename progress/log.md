@@ -97,3 +97,26 @@ reader: state, not narrative.
 - **proposals:** none.
 - **dead ends:** the `/goal` custom command idea — abandoned (goal mode is a Claude Code
   feature, not part of the constraint system).
+
+## 2026-09-01 — Baseline engaged (signed); governance now in force
+
+- **state:** Governance ENGAGED. Clara ran `python3 tools/approve.py --baseline`; baseline
+  recorded and SSH-signed (commit `910ee46`). `tools/validate.py`: governance engaged,
+  signed, no drift. Constraints and goal condition are now frozen — agent proposes, does not
+  edit. Everything pushed to GitHub main. Still no project code; ready for goal mode.
+- **done:**
+  - Diagnosed the first baseline attempt's failure: repo is in signed governance mode
+    (`governance/allowed_signers` holds Clara's ed25519 key), so `approve.py` signs approval
+    commits, but git here had no signing method configured and fell back to a missing gpg.
+  - Fixed by configuring SSH signing **locally** for this clone: `gpg.format=ssh`,
+    `user.signingkey=~/.ssh/id_ed25519_ctsapugay.pub` (matches the key in allowed_signers,
+    signs without a passphrase). Rolled back the half-written uncommitted baseline.txt from
+    the failed run, then Clara re-ran the baseline successfully.
+- **next:** First goal-mode session — define + register the representative problem suite in
+  `checks/registry.md` for Clara's approval, then build toward G1 (verified solving).
+- **approvals:** Clara ran the baseline herself (signed commit `910ee46`).
+- **decisions:** Kept signed governance mode (did not downgrade to attribution). Signing
+  config is local to this clone and not committed; a fresh clone re-runs the two git config
+  lines.
+- **proposals:** none.
+- **dead ends:** none.

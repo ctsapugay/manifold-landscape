@@ -17,22 +17,22 @@ long, degraded one. This is **progress, not governed content**.
 ---
 
 - **updated:** 2026-09-01
-- **phase:** intake complete — goal condition APPROVED by Clara. Awaiting the baseline
-  (governance engagement) before goal mode begins.
-- **now:** All intake files written and approved (constraints, outcomes, goal condition,
-  criteria G1–G6). Goal condition is `state: approved`. `tools/validate.py` is clean and
-  32/32 tool tests pass. Governance is **not yet engaged** — the baseline has not been run.
-- **next:**
-  1. Clara runs `python3 tools/approve.py --baseline` (interactive terminal) to engage
-     governance. From that point the constraints and goal condition are frozen — the agent
-     proposes changes, does not make them.
-  2. Start a fresh session for goal mode: paste the Step-1 priming prompt
-     (`progress/priming-prompt.md`), let it orient, then seed it with the goal condition.
-  3. First goal-mode task: define and register the **representative problem suite** in
-     `checks/registry.md` for Clara's approval (it is governed content the finish line
-     leans on — G1–G5 reference it).
-- **watch:** Get the representative suite right and approved before building against it.
-  Keep API keys out of tracked files (public repo, C-SECRETS); they belong in gitignored
-  env files only. Approver identity: Clara's gmail and GitHub-noreply emails are both in
-  `governance/approvers.txt`.
+- **phase:** intake COMPLETE, governance ENGAGED (signed baseline). Ready for goal mode —
+  no code written yet.
+- **now:** Baseline recorded and signed (commit `910ee46`, `APPROVED: BASELINE`);
+  `tools/validate.py` reports governance engaged, signed, no drift. Constraints and the goal
+  condition are now frozen — the agent proposes changes, does not make them. All pushed to
+  GitHub (`ctsapugay/manifold-landscape`, main). No project code exists yet.
+- **next (first goal-mode session):**
+  1. Define and register the **representative problem suite** in `checks/registry.md`,
+     spanning the four beachhead areas (scalar fields & surfaces; gradients & optimization
+     landscapes; vector fields; linear-algebra-as-geometry). G1–G5 lean on it, and it is
+     governed content — so bring it to Clara for approval (a proposal / her sign-off)
+     before building against it.
+  2. Then start building toward G1 (verified solving) with the engine + verification core,
+     since C-VERIFIED-MATH is the floor everything else sits on.
+- **watch:** Get the representative suite approved before building against it. Keep API keys
+  out of tracked files (public repo — C-SECRETS); gitignored env files only. Governance is
+  in **signed mode**: approval commits must be SSH-signed (git config for that is local to
+  this clone: `gpg.format=ssh`, `user.signingkey=~/.ssh/id_ed25519_ctsapugay.pub`).
 - **open blockers:** none (see `progress/blockers.md`).
