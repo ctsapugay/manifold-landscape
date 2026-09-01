@@ -108,6 +108,11 @@ While working:
   stops being protected. Then keep working inside the current rule. `brief.py` will keep
   surfacing the proposal until Clara acts on it; mention it to her rather than waiting
   silently.
+- **Keep moving; checkpoint against rot.** Don't stall when one thing is blocked — log the
+  blocker, work another front, and surface all blockers together only when every front is
+  blocked. Stop immediately only for genuinely dangerous or irreversible decisions. Keep
+  `progress/checkpoint.md` current, and when a session gets long, refresh it and start a
+  fresh one. Full protocol in "Staying on task across a long run" below.
 
 Stop when every criterion is `met` with real evidence. Then say so and stop — do not keep
 improving past the finish line. `goals/goal-condition.md` has an "out of scope for done"
@@ -130,6 +135,78 @@ If governance has not engaged yet — no baseline — just edit and validate.
 
 Write a proposal. Do not edit. See the second rule above and `docs/governance.md`.
 
+## Staying on task across a long run
+
+Goal mode is a long-horizon activity, and two failure modes show up on long runs: stalling
+the moment one thing is blocked, and quality decaying as a session's context fills up. This
+section is the standard framing for both. It is guidance for how you work — the constraints
+still bind, and nothing here overrides `docs/governance.md` or the safety posture.
+
+### Keep working — stop only when truly blocked or when it would be dangerous
+
+Do not stop and wait just because a decision is in front of you. When a choice only affects
+*how* the work gets done, make it with your own judgment inside the constraints and note it
+in the log — that is what C-SURFACE-AMBIGUITY already says is yours to decide. Keep going
+across every front that is open.
+
+You should stop and hand back to Clara in only two situations:
+
+1. **You are genuinely blocked on every front** — every remaining piece of work is waiting
+   on something you cannot supply (a decision only she can make, an external dependency,
+   an approval). Not "one thing is blocked" — *all* of them. See the blocker protocol
+   below for how you get there without stalling early.
+2. **Proceeding would need her input on something genuinely dangerous or hard to reverse**
+   — an outward-facing action, an irreversible destruction, going live (C-LOCAL), spending
+   money, anything the safety rules say to confirm. Here you stop *immediately* and ask,
+   even if other work remains; do not route around it.
+
+Everything between those two poles is yours to carry forward. Bias toward progress.
+
+### Blocker protocol — log it, move on, surface all at once
+
+When you hit a blocker that is not immediately dangerous:
+
+1. **Record it** in `progress/blockers.md` (id, what it blocks, why, what would unblock it,
+   `status: open`, date).
+2. **Move to other unblocked work.** Do not stall, and do not force past the blocker with a
+   guess on something that changes the outcome.
+3. **Only when every front is blocked**, pause and surface **all open blockers to Clara
+   together** — one consolidated ask, not one interruption per blocker. This pairs with
+   C-SURFACE-AMBIGUITY: batch the questions rather than nagging.
+4. When a blocker clears, mark it `resolved` (with how) and resume that work.
+
+`python3 tools/brief.py` prints open blockers every time, so re-grounding always shows what
+is stuck and what is waiting on her.
+
+### Checkpoint protocol — beat context rot before it beats you
+
+Long sessions drift: you start repeating yourself, lose the thread, or forget a decision.
+The append-only log is *history*; the checkpoint is the *current state*.
+
+- **Keep `progress/checkpoint.md` current.** It is a short, overwritten-in-place "resume
+  here" card: where the work is now, what to do next, what to watch. Refresh it at natural
+  breaks and **before context grows large** — not only at the end.
+- **You cannot reliably read your own remaining context from inside a turn.** There is no
+  trustworthy token gauge to depend on. So trigger this protocol on heuristics instead:
+  work done since the last checkpoint, signs of degradation (repeating, contradicting
+  earlier reasoning, losing track of what you were doing), and before any expensive-to-
+  reverse move. If the harness happens to surface a context or token budget, use it as a
+  bonus signal — but do not rely on one existing. When in doubt, checkpoint early and
+  often; it is cheap.
+- **When a session is getting long or showing rot, refresh the checkpoint and recommend
+  Clara start a fresh session.** A new session resuming from the checkpoint plus
+  `tools/brief.py` beats a long, degraded one. This is what C-RESUMABLE guarantees is
+  *possible*; the checkpoint makes it cheap and lossless.
+
+### Priming a fresh session
+
+`progress/priming-prompt.md` holds a ready-to-paste prompt that tells a cold session what
+to read (this file, `brief.py`, the checkpoint, the log, the blockers), what the project
+is, and where the current state lives. Keep it current when the project's focus shifts —
+the checkpoint carries the moment-to-moment detail, so the priming prompt itself rarely
+needs to change. When you recommend a fresh session, refresh the checkpoint first, then
+point Clara at that file.
+
 ## The files
 
 | File | What it holds |
@@ -142,6 +219,9 @@ Write a proposal. Do not edit. See the second rule above and `docs/governance.md
 | `checks/registry.md` | The executable check suite — many, outside the goal condition. Governed. |
 | `checks/results.json` | The last check run (pass/fail/output). Regenerated by verify.py; gitignored. |
 | `progress/log.md` | Append-only session record so a fresh session can resume. |
+| `progress/blockers.md` | Live blocker ledger. Log a blocker, move on, surface all when fully blocked. Not governed. |
+| `progress/checkpoint.md` | Overwritten current-state "resume here" card. Anti-rot. Not governed. |
+| `progress/priming-prompt.md` | Paste-in prompt to bootstrap a fresh session. Editable. Not governed. |
 | `proposals/` | Your requests to change a rule. Inert until Clara approves. |
 | `governance/baseline.txt` | What Clara approved, as a digest. Written only by `approve.py`. |
 | `docs/outcome-vs-implementation.md` | How to tell an outcome from a smuggled implementation detail. |

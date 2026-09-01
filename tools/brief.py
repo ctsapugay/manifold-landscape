@@ -27,12 +27,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from constraint_files import (  # noqa: E402
     approved_ids,
+    current_checkpoint,
     drift,
     governance_engaged,
     load_baseline,
     load_constraints,
     load_goal,
     load_proposals,
+    open_blockers,
     recent_log_entries,
     signing_configured,
     suite_state,
@@ -239,6 +241,49 @@ def show_governance() -> None:
         print()
 
 
+def show_working_state() -> None:
+    """The live working state: current checkpoint and any open blockers.
+
+    The checkpoint is the overwritten "resume here" card; blockers are the fronts that are
+    stuck. Both are progress, not governed content. Surfacing them here means the
+    re-grounding call always shows where the work stands and what is waiting on Clara.
+    """
+    checkpoint = current_checkpoint()
+    blockers = open_blockers()
+
+    rule()
+    print("WORKING STATE -- checkpoint and open blockers")
+    rule()
+
+    if checkpoint:
+        print("  Checkpoint (progress/checkpoint.md):")
+        for line in checkpoint.splitlines():
+            print(f"  {line}" if line.strip() else "")
+        print()
+    else:
+        print("  (no checkpoint yet -- write progress/checkpoint.md at the next break)")
+        print()
+
+    if blockers:
+        print(f"  {len(blockers)} OPEN BLOCKER(S) -- progress/blockers.md:")
+        for b in blockers:
+            print(f"    [{b.id}] {b.title}")
+            if b.get("blocks"):
+                print(wrap(f"blocks: {b.get('blocks')}", indent="        "))
+            if b.get("needs"):
+                print(wrap(f"needs: {b.get('needs')}", indent="        "))
+        print()
+        print(wrap(
+            "Keep working every front that is not blocked. Surface all open blockers to "
+            "Clara together only when every front is blocked.",
+            indent="  ",
+        ))
+        print()
+    else:
+        print("  No open blockers.")
+        print()
+
+
 def show_progress(limit: int = 3) -> None:
     entries = recent_log_entries(limit)
     rule()
@@ -268,6 +313,7 @@ def main(argv: list[str]) -> int:
     show_constraints()
     show_goal()
     show_governance()
+    show_working_state()
     show_progress()
     rule("-")
     print("Full detail: constraints/, goals/, proposals/, progress/log.md.")

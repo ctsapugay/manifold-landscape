@@ -9,17 +9,27 @@ agent's to soften: see `constraints/defaults.md` (C-GOVERNED-CHANGE) and
 
 ## Status
 
-- **state:** draft
-- **approved:** _not yet approved by Clara_
+- **state:** approved
+- **approved:** 2026-09-01 by Clara ("Looks good to me. I approve everything.")
 
 ## Statement
 
-<!-- INTAKE: one short paragraph. What the project is, and what becomes true when it
-     exists. The overview a newcomer reads first. Not a list of requirements. -->
-
-_Not yet drafted._
+Manifold Landscape is a locally-run tool for building intuition in the geometry of
+continuous mathematics. A user brings a problem in its supported domain — scalar fields and
+surfaces, gradients and optimization landscapes, vector fields, and linear-algebra-as-
+geometry — and the tool solves it with a verification-backed computation engine so the
+answer is trustworthy, presents the solution as an interactive three-dimensional
+visualization the user can manipulate and step through, and explains the intuition while
+answering questions grounded in the actual computed state. It is built to make that
+geometry genuinely understandable, to a standard suitable as portfolio work.
 
 ## What completion requires
+
+Completion is judged and confirmed **through this constraint system**, never asserted from
+the agent's own judgment. The agent works inside the constraints throughout — re-grounding
+with `python3 tools/brief.py` — and claims "done" only after **running** the system's own
+checks and seeing them pass, not from memory or reasoning. If the tools are not green, the
+work is not done, whatever the agent believes.
 
 The task is complete only when **all** of the following hold, and the work is judged
 **only** against these. None may be softened, removed, or reinterpreted except through the
@@ -39,7 +49,16 @@ description repeated here.
 
 ## Out of scope for "done"
 
-<!-- INTAKE: things that will still be imperfect when the goal condition is met, and that
-     is fine. Prevents an agent from working past the finish line. -->
+Things that will still be imperfect when the goal condition is met, and that is fine. They
+stop an agent from working past the finish line.
 
-- _..._
+- Only the four beachhead areas are covered; problems outside them may not solve or render.
+- Visualization is three-dimensional; higher-dimensional projection is a documented future
+  expansion, not required here.
+- Physics problems are not supported — documented as future work.
+- No deployment, hosting, accounts, billing, or multi-user support; the tool runs locally
+  for a single user.
+- Not every conceivable problem within an area needs to be handled — the representative
+  suite defines the bar, not exhaustive coverage.
+- Polish is judged on the core flow being complete and unbroken, not on visual design being
+  final or exhaustively themed.

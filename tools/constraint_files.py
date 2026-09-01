@@ -37,6 +37,8 @@ GOAL_FILE = ROOT / "goals" / "goal-condition.md"
 CRITERIA_FILE = ROOT / "goals" / "criteria.md"
 OUTCOMES_FILE = ROOT / "goals" / "outcomes.md"
 LOG_FILE = ROOT / "progress" / "log.md"
+BLOCKERS_FILE = ROOT / "progress" / "blockers.md"
+CHECKPOINT_FILE = ROOT / "progress" / "checkpoint.md"
 CHECKS_FILE = ROOT / "checks" / "registry.md"
 RESULTS_FILE = ROOT / "checks" / "results.json"
 
@@ -279,6 +281,36 @@ def recent_log_entries(limit: int = 3) -> list[str]:
     if current:
         chunks.append("\n".join(current).strip())
     return [c for c in chunks if c][-limit:]
+
+
+def open_blockers() -> list[Section]:
+    """Open blocker entries from progress/blockers.md (id starts with 'B').
+
+    Blockers are progress, not governed content. An open blocker is one whose status is
+    anything other than 'resolved'. The goal-mode protocol (see CLAUDE.md) records a
+    blocker, moves to other unblocked work, and only surfaces all open blockers to Clara
+    at once when every front is blocked. Missing file -> empty list.
+    """
+    out: list[Section] = []
+    for s in parse_file(BLOCKERS_FILE):
+        if s.id and s.id.upper().startswith("B") and s.get("status").lower() != "resolved":
+            out.append(s)
+    return out
+
+
+def current_checkpoint() -> str:
+    """The current checkpoint body (progress/checkpoint.md), after the last '---'.
+
+    The checkpoint is an overwritten-in-place current-state card, distinct from the
+    append-only log. Returns the text after the final '---' separator (the live body),
+    or '' if the file is missing or empty.
+    """
+    if not CHECKPOINT_FILE.exists():
+        return ""
+    text = CHECKPOINT_FILE.read_text(encoding="utf-8")
+    if "\n---\n" in text:
+        text = text.rsplit("\n---\n", 1)[1]
+    return text.strip()
 
 
 # ------------------------------------------------------------- governance ----
