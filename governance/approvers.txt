@@ -1,0 +1,4 @@
+# Commit author emails whose approvals count. One per line.
+# tools/validate.py rejects an approval commit from anyone not listed here.
+# Change this the same way you'd change a constraint: deliberately, and in a commit.
+ctsapugay@gmail.com
