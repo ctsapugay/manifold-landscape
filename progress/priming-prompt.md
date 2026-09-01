@@ -1,9 +1,12 @@
-# Priming prompt
+# Priming prompt — worker
 
-A ready-to-paste prompt for starting a **fresh session** on this project — after a context
-reset, a new day, or a handoff from a session that was getting long. It tells a cold
+A ready-to-paste prompt for starting a fresh **worker** session on this project — after a
+context reset, a new day, or a handoff from a session that was getting long. It tells a cold
 session what to read to understand the constraint system, what this project is, and where
 the current state lives.
+
+For an **observer** session (read-only, watches the worker without interrupting it — often
+Clara's phone over Remote Control), use `progress/priming-prompt-observer.md` instead.
 
 It is deliberately **orientation only** — it gets the session to *understand*, and then
 stops. Seeding it into goal mode is a separate, second step (see below), so a fresh session

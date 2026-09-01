@@ -221,7 +221,8 @@ point Clara at that file.
 | `progress/log.md` | Append-only session record so a fresh session can resume. |
 | `progress/blockers.md` | Live blocker ledger. Log a blocker, move on, surface all when fully blocked. Not governed. |
 | `progress/checkpoint.md` | Overwritten current-state "resume here" card. Anti-rot. Not governed. |
-| `progress/priming-prompt.md` | Paste-in prompt to bootstrap a fresh session. Editable. Not governed. |
+| `progress/priming-prompt.md` | Paste-in prompt to bootstrap a fresh worker session. Editable. Not governed. |
+| `progress/priming-prompt-observer.md` | Paste-in prompt to bootstrap a read-only observer session. Editable. Not governed. |
 | `proposals/` | Your requests to change a rule. Inert until Clara approves. |
 | `governance/baseline.txt` | What Clara approved, as a digest. Written only by `approve.py`. |
 | `docs/outcome-vs-implementation.md` | How to tell an outcome from a smuggled implementation detail. |
@@ -302,6 +303,9 @@ The observer has two windows into the worker, and should use both. If you are th
 
 If you are the worker, nothing changes: keep logging at every natural break (constraint
 C-RESUMABLE), because that log is exactly what the observer — and the next session — reads.
+
+To start either session cleanly, paste its priming prompt: `progress/priming-prompt.md`
+for a worker, `progress/priming-prompt-observer.md` for an observer.
 
 ## Optional shortcuts
 
