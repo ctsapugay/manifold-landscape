@@ -1,6 +1,6 @@
 ## P-0001 — Representative problem suite (the bar for G1–G5)
 
-- **status:** proposed
+- **status:** approved
 - **kind:** new-constraint
 - **targets:** G1–G5 (criteria that reference "the representative suite"); checks/registry.md (CHK-001)
 - **proposed:** 2026-09-01
@@ -92,4 +92,4 @@
   governance is meant to enforce. Approving this does not commit Clara to these exact
   problems forever; it commits the agent to not lowering the bar without her.
 
-- **approved:**
+- **approved:** 2026-09-02

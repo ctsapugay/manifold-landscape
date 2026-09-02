@@ -71,12 +71,60 @@ a passing verification record (constraint C-VERIFIED-MATH).
 - **waived:**
 - **waived-by:**
 
+## CHK-002 — Scenes stay within the interactive render budget
+
+- **covers:** G2
+- **run:** python3 tools/check_render_budget.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-003 — Step-through builds each scene in sync
+
+- **covers:** G3
+- **run:** python3 tools/check_stepthrough.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-004 — Answers are grounded in the verified computed state
+
+- **covers:** G4
+- **run:** python3 tools/check_grounded.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-005 — End-to-end flow runs for every suite problem
+
+- **covers:** G5
+- **run:** python3 tools/check_e2e.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-006 — Scope and future expansion are documented
+
+- **covers:** G6
+- **run:** python3 tools/check_scope_docs.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-007 — Engine unit suite (regression net)
+
+- **covers:** G1
+- **run:** python3 -m pytest tests/ -q
+- **status:** active
+- **waived:**
+- **waived-by:**
+
 <!--
-Further checks are registered as their capabilities are built, each a governed addition
-(CLAUDE.md: "Register checks as you build ... a governed change — propose it like any
-other"): a sustained-frame-rate measurement (G2/C-INTERACTIVE), a step-through sync check
-(G3), a grounded-answer check (G4/C-GROUNDED-EXPLANATION), an end-to-end flow check (G5),
-and a scope-documentation check (G6). They are added when the thing they verify exists,
-so they are not registered red-and-hollow ahead of it.
+Note on G2 (C-INTERACTIVE). THRESHOLD: sustained 60 fps during manipulation, i.e. a frame
+cost at or below 16.7 ms/frame, on Clara's development machine. CHK-002 is the automated
+regression guard (it bounds the geometry each scene sends to the GPU so a change that would
+tank the frame rate fails there). The actual frame cost is measured in the running app with
+window.__ml.bench(): across the suite's scenes it is ≤ ~2 ms/frame (heaviest: the 3-D vector
+field V3 at ~1.95 ms), i.e. 8×–100× under the 16.7 ms budget — recorded as G2's evidence.
 -->
 
