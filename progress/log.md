@@ -348,3 +348,66 @@ reader: state, not narrative.
   both recorded as signed APPROVED commits.
 - **proposals:** P-0001, P-0002 — both approved.
 - **dead ends:** none.
+
+## 2026-09-02 — Intake redo: scope expanded to an agentic AI tutor (awaiting baseline)
+
+- **state:** 🚧 Governed spec REWRITTEN for a much larger vision; **Clara records it next**
+  with `python3 tools/approve.py --baseline`. This is a Clara-initiated goal change
+  (CLAUDE.md Situation 3): edits made, `validate.py` shows expected DRIFT on constraints/goal
+  until she baselines. v1 was met + shipped (`f3d98d6`) and is now the foundation.
+- **the new vision (from a full re-interview):** an **AI tutor agent** that (1) takes a
+  problem in ANY form — equation, word problem, or open request ("show me chaos"); (2)
+  **orchestrates deterministic tools** to solve/visualize/explain (agent decides which tools,
+  when); (3) adds a **fifth area: dynamical systems (ODEs)** — phase portraits, fixed points,
+  stability via Jacobian eigenvalues, chaos; (4) **drives the visualization** as it tutors
+  (zoom to the min, highlight a saddle); (5) **multi-turn grounded chat** at any step; (6) a
+  **toggle** to show the agent's tool-calls; (7) a **thinking indicator**, 3D smooth while it
+  thinks. Purpose: showcase math depth + agentic-AI skill, portfolio standard.
+- **done (spec edits, all governed content Clara will baseline):**
+  - `constraints/project.md`: **C-VERIFIED-MATH revised** — tools are the primary source and a
+    result is shown verified only after an independent check; the agent MAY derive math itself
+    when no tool applies, but it's checked where possible and otherwise **clearly labelled
+    model-derived/unverified** (per Clara's explicit instruction to edit this). C-INTERACTIVE
+    now covers "smooth even while the agent thinks". C-GROUNDED-EXPLANATION covers LLM answers +
+    the labelled-model-derived nuance.
+  - `goals/outcomes.md` rewritten; `goals/goal-condition.md` new statement + **state reset
+    `met`→`approved`** + updated out-of-scope (PDEs/physics/4D+ deferred; API calls OK; a small
+    labelled-model-derived class OK). `goals/criteria.md`: new **G1–G9** (all unmet).
+  - `checks/registry.md`: **test-set governance** = protected core can't shrink without Clara,
+    additions free; CHK-001…007 kept as the foundation regression net; covers remapped to new
+    criteria; worker-notes on new checks (G2/G3/G5/G7) + revisions (CHK-004/005/006).
+  - `.env.example` added (placeholders, committable) + `.gitignore` `!.env.example`; real key
+    goes in gitignored `.env`.
+  - Both priming prompts rewritten (worker + observer) for the agentic vision.
+- **next:** (1) Clara: `python3 tools/approve.py --baseline`; (2) Clara seeds fresh worker +
+  observer from the priming prompts; (3) worker builds the agentic tutor on the existing
+  foundation (reuse engine/ + web/), registering/revising checks as governed changes.
+- **decisions/notes:** 9 criteria (validate warns >8 — justified for a project this size:
+  each is a distinct, checkable outcome). Existing checks still pass on the foundation, so
+  verify.py stays green after baseline while criteria are 0/9 met → goal correctly not "met".
+  G2 threshold set at ≥90% held-out + 100% protected core (Clara can adjust before baselining).
+- **approvals:** Clara directed the whole expansion in-session incl. explicitly authorizing the
+  C-VERIFIED-MATH edit; she records it via `--baseline`. No proposal (Situation 3 change).
+- **proposals:** none new (P-0001, P-0002 remain approved).
+- **dead ends:** none.
+
+## 2026-09-02 — Intake clarifications (still pre-baseline): last-resort model math; optional tutor
+
+- **state:** Two clarifications from Clara folded into the (still-uncommitted) expanded spec,
+  before she baselines.
+- **done:**
+  - **C-VERIFIED-MATH:** strengthened — model-computed math is a **last resort** used only
+    where no deterministic tool can produce/check the result; the expectation is to **close
+    gaps by building tools** (a new solver, or model-generated code executed deterministically
+    and verified), not by leaning on the model. Updated the rule, check, and why; and the
+    worker priming prompt now directs "hit a gap → build a tool, don't let the model compute."
+  - **Tutor/step-by-step is OPTIONAL:** default experience = answer + interactive 3D visual
+    (nothing forced); the step-by-step walkthrough is opt-in (a button/toggle), and only then
+    does the tutor build the scene in sync and drive the visuals. Updated outcomes (pts 4–6),
+    the goal statement, criteria G4 (default answer+visual; opt-in walkthrough) and G5 (tutor
+    drives visuals during the walkthrough or on a question), and both priming prompts.
+- **next:** unchanged — Clara `python3 tools/approve.py --baseline`, then seed fresh worker +
+  observer.
+- **approvals:** clarifications directed by Clara in-session; recorded via `--baseline`.
+- **proposals:** none new.
+- **dead ends:** none.

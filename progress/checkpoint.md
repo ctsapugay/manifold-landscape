@@ -17,29 +17,34 @@ long, degraded one. This is **progress, not governed content**.
 ---
 
 - **updated:** 2026-09-02
-- **phase:** ✅ **DONE.** Goal condition met and verified. P-0001 + P-0002 approved (signed).
-  All six criteria G1–G6 `met` with evidence; `goals/goal-condition.md` state `met`.
-  `python3 tools/verify.py` GREEN (CHK-001…007); `python3 tools/validate.py` no errors, no
-  drift; 12 constraints held, 0 waived.
-- **run it:** `python3 web/server.py` → http://127.0.0.1:8765
-- **only open item (not a gate failure):** work is uncommitted — `validate.py` warns the
-  goal/criteria files + project code should be committed so history reflects the done state.
-  Awaiting Clara's go-ahead to commit. Optional follow-ups: vendor Three.js (offline
-  robustness); project README for the public repo.
-- **older phase note:** engine + scenes + interactive frontend + Q&A all built and working.
-- **now:** Everything is built and **`python3 tools/verify.py` = 7/7 GREEN**; `pytest tests/`
-  = 25 green. Engine (4 areas, provenance+verification), `engine/scene.py` (step-tagged
-  geometry), `engine/explain.py` (grounded Q&A), the suite (`suite/problems.json` +
-  `tools/run_suite.py`), and a **working local web app** (`python3 web/server.py` →
-  http://127.0.0.1:8765) with Three.js 3-D + orbit controls (G2), step-through (G3), grounded
-  ask box (G4), verified-results panel, and `docs/scope.md` (G6). Two proposals (P-0001 suite,
-  P-0002 checks) PENDING. **No criteria marked met yet** — deliberate; done in the finish pass
-  after approvals. Agent committed nothing (commit when Clara asks).
-- **watch:** Don't mark criteria met / goal met until P-0001 + P-0002 approved (else the finish
-  rests on unapproved checks). Frontend needs the pane VISIBLE for real canvas size + rAF (fps=0
-  when hidden) — measure G2 fps with the app in front. SymPy footgun: `sympify(expr,
-  locals=<real symbols>)` or derivatives are 0. Matrices: exact SymPy matrix (`nsimplify`), not
-  the float ndarray, or defective-eigen detection is lost. Secrets out of tracked files (public
-  repo). Signed governance (approval commits SSH-signed).
-- **open blockers:** effectively blocked on Clara's two approvals for the finish (see top). No
-  other in-scope, unblocked work remains that isn't past the finish line.
+- **phase:** 🚧 **INTAKE EXPANSION drafted — awaiting Clara's baseline.** The narrower v1
+  goal was met + shipped (commit `f3d98d6`). Clara then redid intake to a much bigger vision:
+  an **agentic AI tutor** that solves *arbitrary* in-scope problems, adds a **fifth area
+  (dynamical systems / ODEs)**, drives the visualization, and chats. The governed spec has
+  been rewritten to match; **Clara records it next.**
+- **NEXT — Clara runs (one command):** `python3 tools/approve.py --baseline` to record the
+  expanded constraints + goal + criteria as the new baseline (validate.py will show DRIFT on
+  constraints/goal until she does — that is expected for a Clara-initiated change). Then she
+  seeds a **fresh worker + observer** from the updated priming prompts.
+- **what changed in the spec (this session):** `constraints/project.md` (C-VERIFIED-MATH now
+  "tool-computed & verified OR clearly labelled model-derived"; C-INTERACTIVE "smooth even
+  while the agent thinks"; C-GROUNDED-EXPLANATION for LLM answers). `goals/outcomes.md`,
+  `goals/goal-condition.md` (state reset to `approved`; new statement; updated out-of-scope),
+  `goals/criteria.md` (new **G1–G9**). `checks/registry.md` (test-set governance: protected
+  core can't shrink without Clara, additions free; existing CHK-001…007 are the foundation
+  regression net; new checks to be registered by the worker). New `.env.example` (+ `.gitignore`
+  allows it). Both priming prompts rewritten.
+- **then — the fresh worker builds (does NOT need re-approval to start):** the tool-orchestrating
+  **agent** (Anthropic/Claude API via `.env`), **arbitrary problem intake** (equation / word
+  problem / conceptual), the **5th area (ODEs)** — reuse vector-field + linalg engine (flow
+  field, integrate trajectories, fixed points at F=0, stability via Jacobian eigenvalues,
+  Lorenz-type chaos), the **tutor driving the visuals**, **multi-turn grounded chat**, the
+  **tool-call transparency toggle**, and a **thinking indicator**. Register new checks + revise
+  CHK-004/005/006 (governed); grow the test set (additions free).
+- **watch:** This is an EXPANSION on a working foundation (`engine/`, `web/`, tests, CHK-001…007
+  all green on main) — reuse it, don't rebuild. C-VERIFIED-MATH still binds: tools first, verify,
+  and anything the model itself derives must be checked-where-possible and otherwise labelled
+  model-derived — never shown as verified. Keep the API key out of tracked files (`.env`
+  gitignored; public repo — C-SECRETS). Signed governance (approval commits SSH-signed; git
+  config local to this clone).
+- **open blockers:** none. (Waiting on Clara's baseline is the handoff, not a blocker.)

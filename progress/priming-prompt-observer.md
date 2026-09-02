@@ -35,11 +35,17 @@ session that is doing the actual work in the same directory. Get oriented:
    and search_session_transcripts to search across sessions. Reading it does NOT interrupt
    the worker.
 
-The project: a locally-run tool for building intuition in the geometry of continuous math
-(scalar fields & surfaces, gradients & optimization landscapes, vector fields, and linear-
-algebra-as-geometry). It solves problems with a verification-backed engine (never trusting
-the model for raw math — C-VERIFIED-MATH), renders interactive 3D visualizations, and
-explains the intuition. The finish line is in goals/.
+The project: a locally-run, AI-TUTORED tool for building intuition in the geometry of
+continuous math across FIVE areas — scalar fields & surfaces, gradients & optimization
+landscapes, vector fields, linear algebra as geometry, and dynamical systems (ODEs). A user
+poses a problem however they like (equation, word problem, or an open request like "show me
+chaos"); an AI AGENT interprets it and orchestrates deterministic tools to solve, visualize,
+and explain it — every displayed value tool-computed and verified, or clearly labelled
+model-derived (C-VERIFIED-MATH; model math is a last resort). By default it gives the answer
++ an interactive 3D visual; on demand it TUTORS — an OPTIONAL step-by-step walkthrough that
+drives the visualization to point at things and answers follow-up questions at any step. A
+deterministic foundation (first four areas, basic 3D app) already shipped on main; the worker
+is now building the agentic tutor on top. The finish line (G1–G9) is in goals/.
 
 Your task is to check in when I ask and answer any questions I might have.
 

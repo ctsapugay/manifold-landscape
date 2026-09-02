@@ -1,6 +1,7 @@
 # Local environment and secrets — constraint C-SECRETS
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 secrets/
