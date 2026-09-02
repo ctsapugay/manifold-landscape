@@ -9,20 +9,30 @@ agent's to soften: see `constraints/defaults.md` (C-GOVERNED-CHANGE) and
 
 ## Status
 
-- **state:** met
-- **approved:** 2026-09-01 by Clara ("Looks good to me. I approve everything.")
-- **met:** 2026-09-02 — all six criteria (G1–G6) met with recorded evidence; `python3 tools/verify.py` GREEN (CHK-001…007, suite + battery approved via P-0001, P-0002); `python3 tools/validate.py` clean, no drift; all constraints held throughout.
+- **state:** approved
+- **approved:** 2026-09-02 by Clara — expanded scope (agentic AI tutor; arbitrary problem
+  intake; fifth area, dynamical systems). The prior, narrower goal was met and shipped on
+  2026-09-02 (commit `f3d98d6`) and now serves as the foundation this expansion builds on.
+- **history:** original goal approved 2026-09-01 ("Looks good to me. I approve everything.")
+  and met 2026-09-02 (six criteria, verify.py green); superseded by this expansion.
 
 ## Statement
 
-Manifold Landscape is a locally-run tool for building intuition in the geometry of
-continuous mathematics. A user brings a problem in its supported domain — scalar fields and
-surfaces, gradients and optimization landscapes, vector fields, and linear-algebra-as-
-geometry — and the tool solves it with a verification-backed computation engine so the
-answer is trustworthy, presents the solution as an interactive three-dimensional
-visualization the user can manipulate and step through, and explains the intuition while
-answering questions grounded in the actual computed state. It is built to make that
-geometry genuinely understandable, to a standard suitable as portfolio work.
+Manifold Landscape is a locally-run, **AI-tutored** tool for building intuition in the
+geometry of continuous mathematics. A user poses a problem **however they like** — a typed
+equation, a word problem, or an open request like "show me an example of chaos" — across
+**scalar fields & surfaces, gradients & optimization landscapes, vector fields, linear
+algebra as geometry, and dynamical systems (ODEs)**. An **AI agent interprets the request
+and orchestrates a set of deterministic tools** to solve it, so every result the user sees
+is either tool-computed and verified or clearly labelled as model-derived (C-VERIFIED-MATH;
+the model computing math itself is a last resort). **By default it presents the answer as an
+interactive three-dimensional visualization** the user can manipulate; and, **when the user
+asks for it**, it **tutors** — an optional step-by-step walkthrough that builds the
+visualization in sync, drives it to point at what matters, and answers follow-up questions at
+any step, grounded in the actual computed state. The agent's tool use is **inspectable**, and
+the visualization stays responsive while it thinks. It is built to make that geometry
+genuinely understandable and to demonstrate both mathematical depth and agentic-AI craft, to
+a standard suitable as portfolio work.
 
 ## What completion requires
 
@@ -53,13 +63,17 @@ description repeated here.
 Things that will still be imperfect when the goal condition is met, and that is fine. They
 stop an agent from working past the finish line.
 
-- Only the four beachhead areas are covered; problems outside them may not solve or render.
+- Only the five supported areas are covered; requests outside them may be mapped to the
+  nearest in-scope illustration or honestly declined — they need not solve or render.
+- **PDEs are a documented future expansion of the dynamical-systems area, not required here.**
+- Physics problems are not supported — documented as future work.
 - Visualization is three-dimensional; higher-dimensional projection is a documented future
   expansion, not required here.
-- Physics problems are not supported — documented as future work.
 - No deployment, hosting, accounts, billing, or multi-user support; the tool runs locally
-  for a single user.
-- Not every conceivable problem within an area needs to be handled — the representative
-  suite defines the bar, not exhaustive coverage.
+  for a single user. (Calling an LLM API over the network is expected and is not deployment.)
+- Not every conceivable input needs to succeed — the held-out test set defines the bar, not
+  exhaustive coverage; the rest is handled gracefully rather than perfectly.
+- A small class of results may be shown **clearly labelled as model-derived and unverified**;
+  not everything is tool-verifiable, and that is acceptable when it is honestly marked.
 - Polish is judged on the core flow being complete and unbroken, not on visual design being
   final or exhaustively themed.

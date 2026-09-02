@@ -23,52 +23,74 @@ concrete commands and paths in `check:` (which is not shape-scanned), not in `cr
 Executable checks that run automatically belong in `checks/registry.md` and can reference
 a criterion with `covers:`.
 
-> **On the representative problem suite.** Several criteria below refer to a *representative
-> problem suite* spanning the four beachhead areas. That suite is defined and registered in
-> `checks/registry.md` at the start of goal mode and approved by Clara — so it is governed
-> content the agent cannot quietly weaken to pass. It sets the bar for "done"; it is not
-> meant to be exhaustive.
+> **On the test set.** Several criteria refer to a *held-out test set* spanning the five
+> areas and the input styles (equation, word problem, conceptual request). That set lives in
+> the repository and is described in `checks/registry.md`. Its governance is asymmetric
+> (Clara's rule): a **protected core** of canonical problems may not be removed or weakened
+> without her approval, but the agent may **freely add** problems to broaden coverage. The
+> test set defines the bar for "done"; it is not meant to be exhaustive.
 
 ---
 
-## G1 — Correct, verified solutions across the four areas
+## G1 — Trustworthy mathematics: verified, or honestly labelled
 
-- **criterion:** For every problem in the approved representative suite spanning all four beachhead areas, the solution the tool presents matches an independently computed reference, and each displayed quantity carries a record showing it came from the deterministic engine and passed verification.
-- **check:** Run the suite via `python3 tools/verify.py`; each problem's solution is compared against a known-good reference computed independently, and each result's provenance-and-verification record is present and passing. No result traces back to model text alone (constraint C-VERIFIED-MATH).
-- **state:** met
-- **evidence:** 2026-09-02 `python3 tools/verify.py` GREEN. CHK-001 (`tools/run_suite.py`): all 12 suite problems solved; every displayed quantity is engine-produced (provenance in sympy./numpy./scipy./engine.*, `model` rejected at construction) and passed its independent verification step; every key answer matches an independently-computed reference — S1–S3 critical points & types, O1–O3 minima/Rosenbrock (1,1)/Lagrange (½,½) λ=1, V1–V3 divergence & curl, L1–L2 eigenvalues/determinant/defectiveness, L3 SVD singular values [3, √3, √3] (reference via eig(AᵀA), independent of the engine's SVD). CHK-007 (`pytest tests/`): 25 passed.
+- **criterion:** Every mathematical result the interface shows is either produced by a deterministic tool and independently verified, or clearly labelled to the user as model-derived and unverified; nothing unverified is ever presented as if it were verified.
+- **check:** Across the test set, trace every displayed result: each is backed by a tool computation with a passing verification record, or carries a visible model-derived/unverified label. An automated check in `checks/registry.md` confirms no unverified value is presented as verified (constraint C-VERIFIED-MATH).
+- **state:** unmet
+- **evidence:**
 
-## G2 — Interactive three-dimensional visualization
+## G2 — Broad problem coverage across the five areas and all input styles
 
-- **criterion:** Each solved problem is shown as a three-dimensional scene the user can rotate, zoom, and pan, and the scene keeps responding smoothly while they do so on Clara's machine.
-- **check:** Open a representative set of solved problems, manipulate each view, and observe smooth interaction; a scripted or instrumented measurement records a sustained frame rate above the threshold set in `checks/registry.md` during manipulation (constraint C-INTERACTIVE).
-- **state:** met
-- **evidence:** 2026-09-02 CHK-002 (`tools/check_render_budget.py`) GREEN — all 12 scenes within the interactive geometry budget. Threshold (registry): sustained 60 fps ≡ ≤16.7 ms/frame. Instrumented in the running app via `window.__ml.bench(180)`: frame cost ≤ ~2 ms/frame across all suite scenes — worst case the 3-D vector field V3 (729 arrows) at 1.95 ms; surfaces ~0.45 ms; SVD 0.13 ms — i.e. 8×–100× under the 60-fps budget. Rotate/zoom/pan confirmed smooth in the browser (drag-rotate verified on paraboloid and SVD scenes).
+- **criterion:** The agent solves problems spanning all five areas — scalar fields & surfaces, gradients & optimization landscapes, vector fields, linear algebra as geometry, and dynamical systems (ODEs) — posed as equations, word problems, or open conceptual prompts, succeeding on a large held-out test set, and handling out-of-scope inputs gracefully rather than crashing or bluffing.
+- **check:** Run the agent over the held-out test set (in `checks/registry.md`); it succeeds on at least **90%** of it and on **100% of the protected core** of canonical problems, and a sample of deliberately out-of-scope requests is either mapped to the nearest in-scope illustration or honestly declined — never answered with an unlabelled fabrication.
+- **state:** unmet
+- **evidence:**
 
-## G3 — Step-through builds the visualization in sync
+## G3 — Agentic, tool-orchestrated solving
 
-- **criterion:** For a solved problem the user can move through the solution one step at a time, and the scene shown at each step contains exactly the geometry that step introduces — no more, no less.
-- **check:** Advance through a representative problem step by step and confirm at each step that the newly shown geometry corresponds to that step's mathematical operation (e.g. the gradient vector appears when the gradient step runs), with nothing from later steps shown early.
-- **state:** met
-- **evidence:** 2026-09-02 CHK-003 (`tools/check_stepthrough.py`) GREEN — for all 12 suite problems, at each step the newly-visible layers are exactly those tagged with that step, and no later-step geometry is ever shown early. Confirmed live in the browser via `window.__ml`: stepping the paraboloid 0→1→2→3 gave visible layer-steps [0]/[0,1]/[0,1]/[0,1,3] — the gradient field appears at the gradient step, the critical point at the critical-point step.
+- **criterion:** Solving is performed by an AI agent that interprets the user's input and decides which deterministic tools to call and in what order; it is not a fixed hard-coded pipeline, and the mathematics is done by the tools (or, only where no tool applies, by the agent subject to G1).
+- **check:** For a representative set of problems, inspect the recorded agent trace: the agent chose and sequenced tool calls in response to the input (different inputs drive different tool sequences), and every displayed mathematical value came from a tool call or is labelled model-derived (constraint C-VERIFIED-MATH). An automated check in `checks/registry.md` exercises this.
+- **state:** unmet
+- **evidence:**
 
-## G4 — Grounded questions and answers at any step
+## G4 — Interactive three-dimensional visualization with in-sync step-through
 
-- **criterion:** At any point in a solved problem the user can pose a question and receives an explanation that agrees with the engine's computed values for that problem and contradicts none of them.
-- **check:** For a set of scripted questions across representative problems, confirm each answer references the correct computed values and asserts nothing the engine's results contradict (constraint C-GROUNDED-EXPLANATION).
-- **state:** met
-- **evidence:** 2026-09-02 CHK-004 (`tools/check_grounded.py`) GREEN — 11 scripted questions across S1/S2/O2/O3/V1/V2/V3/L1/L2/L3. Each answer cites only verified quantities (`grounded_in` ⊆ the problem's verified results), states the correct computed value (e.g. minimum at (0,0); curl = 2 with "rotates"; eigenvalues 3 and 1; singular values 3, 1.73), and contains no claim the engine contradicts (e.g. the saddle answer never says "minimum"/"maximum"). The explanation engine composes answers only from verified `Quantity` values — no model in the numeric path. `tests/test_explain.py`: 6 passed.
+- **criterion:** By default each solved problem is shown as the answer plus an interactive three-dimensional scene the user can rotate, zoom, and pan smoothly, with no step-through forced on them; and the user can opt into a step-by-step walkthrough (a control they choose) that builds the scene in sync, each step showing exactly the geometry it introduces — no more, no less, and nothing from a later step shown early.
+- **check:** Open a representative set of solved problems; by default the answer and an explorable scene appear with no forced stepping, and manipulation is smooth (a measured sustained frame rate above the threshold in `checks/registry.md`, constraint C-INTERACTIVE); then start the optional walkthrough and advance step by step, confirming each step shows exactly its geometry at its step (check in `checks/registry.md`).
+- **state:** unmet
+- **evidence:**
 
-## G5 — Polished, unbroken end-to-end flow
+## G5 — The tutor drives the visualization
 
-- **criterion:** The complete path from posing a problem to a solved, explorable, explained result runs end to end for every problem in the representative suite with no error, dead end, or placeholder in the interface.
-- **check:** Walk the full flow — pose, solve, visualize, step through, ask a question — for every problem in the representative suite; confirm no crash, no unhandled error surfaced to the user, and no placeholder or broken state anywhere in the core flow.
-- **state:** met
-- **evidence:** 2026-09-02 CHK-005 (`tools/check_e2e.py`) GREEN — for all 12 suite problems the full flow (pose → solve → build scene → step through → ask) runs with no exception, every displayed quantity verified and engine-sourced, a valid base+step sequence, and grounded answers. Exercised live in the browser through `web/server.py` (http://127.0.0.1:8765): selecting problems solves and renders them, stepping and the ask box work, and server errors surface as clean JSON messages, never stack traces or placeholders.
+- **criterion:** When the user is being tutored — the optional walkthrough, or a question they ask — and it aids understanding (a judgment the agent makes), the tutor's explanation manipulates the scene, focusing, highlighting, or transforming the relevant feature so the user's attention is drawn to what is being explained; it need not do so every time, only when it helps.
+- **check:** Over a scripted set of "focusing" questions where a visual move is clearly warranted (e.g. "where is the minimum?"), the view demonstrably lands on or highlights the correct feature; and the agent has, and uses, the capability to drive camera, highlights, and transforms. An automated check in `checks/registry.md` exercises the focusing cases.
+- **state:** unmet
+- **evidence:**
 
-## G6 — Scope and future expansion are documented
+## G6 — Grounded, multi-turn tutoring chat at any step
 
-- **criterion:** The repository documents the supported scope and the planned future expansions — including physics and higher-than-three-dimensional visualization — distinguishing what is in scope now from what is deferred.
-- **check:** Open the scope/expansion documentation in the repository and confirm it states the four supported areas and lists the deferred expansions (at least physics and higher-dimensional visualization) clearly enough that a user is not misled about what the tool does.
-- **state:** met
-- **evidence:** 2026-09-02 CHK-006 (`tools/check_scope_docs.py`) GREEN — `docs/scope.md` names all four supported areas (scalar fields & surfaces, gradients & optimization, vector fields, linear algebra as geometry) and the deferred expansions (physics; higher-than-three-dimensional visualization), and distinguishes current scope from deferred/future work.
+- **criterion:** At any point in a solved problem the user can converse with the tutor across multiple turns, and every answer is consistent with that problem's computed and verified state and contradicts none of it, with quantitative claims tracing to a computed result or labelled model-derived.
+- **check:** For a set of scripted multi-turn conversations across representative problems, each answer references the correct computed values and asserts nothing the engine's results contradict; any claim not backed by a computed result is labelled model-derived (constraints C-GROUNDED-EXPLANATION, C-VERIFIED-MATH). An automated check in `checks/registry.md` exercises this.
+- **state:** unmet
+- **evidence:**
+
+## G7 — Transparent and responsive experience
+
+- **criterion:** The user can toggle a view of the agent's tool-calls (what it computed) on or off; a visible indicator shows while the agent is working; and the three-dimensional visualization stays responsive to manipulation while the agent thinks.
+- **check:** In the running app, toggle the agent-activity view on and off (it shows the tool-calls when on, hides them when off); confirm a thinking indicator appears during agent work; and confirm the scene still rotates/zooms/pans smoothly while a response is being computed (constraint C-INTERACTIVE).
+- **state:** unmet
+- **evidence:**
+
+## G8 — Polished, unbroken end-to-end flow
+
+- **criterion:** The complete path — pose a problem, have it interpreted, solved, visualized, stepped through, and chatted about — runs end to end across the held-out test set with no crash, no unhandled error surfaced to the user, no dead end, and no placeholder in the interface.
+- **check:** Walk the full flow (pose → interpret → solve → visualize → step → chat) for a representative sample of the test set; confirm no crash, no unhandled error reaches the user, and no placeholder or broken state anywhere in the core flow. An automated end-to-end check in `checks/registry.md` exercises the sample.
+- **state:** unmet
+- **evidence:**
+
+## G9 — Scope and future expansion are documented
+
+- **criterion:** The repository documents the five supported areas and the planned future expansions — at least PDEs, physics, and higher-than-three-dimensional visualization — distinguishing what is in scope now from what is deferred.
+- **check:** Open the scope/expansion documentation in the repository and confirm it states the five supported areas (including dynamical systems / ODEs) and lists the deferred expansions (at least PDEs, physics, and higher-dimensional visualization) clearly enough that a user is not misled about what the tool does.
+- **state:** unmet
+- **evidence:**
