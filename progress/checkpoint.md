@@ -16,23 +16,30 @@ long, degraded one. This is **progress, not governed content**.
 
 ---
 
-- **updated:** 2026-09-01
-- **phase:** intake COMPLETE, governance ENGAGED (signed baseline). Ready for goal mode —
-  no code written yet.
-- **now:** Baseline recorded and signed (commit `910ee46`, `APPROVED: BASELINE`);
-  `tools/validate.py` reports governance engaged, signed, no drift. Constraints and the goal
-  condition are now frozen — the agent proposes changes, does not make them. All pushed to
-  GitHub (`ctsapugay/manifold-landscape`, main). No project code exists yet.
-- **next (first goal-mode session):**
-  1. Define and register the **representative problem suite** in `checks/registry.md`,
-     spanning the four beachhead areas (scalar fields & surfaces; gradients & optimization
-     landscapes; vector fields; linear-algebra-as-geometry). G1–G5 lean on it, and it is
-     governed content — so bring it to Clara for approval (a proposal / her sign-off)
-     before building against it.
-  2. Then start building toward G1 (verified solving) with the engine + verification core,
-     since C-VERIFIED-MATH is the floor everything else sits on.
-- **watch:** Get the representative suite approved before building against it. Keep API keys
-  out of tracked files (public repo — C-SECRETS); gitignored env files only. Governance is
-  in **signed mode**: approval commits must be SSH-signed (git config for that is local to
-  this clone: `gpg.format=ssh`, `user.signingkey=~/.ssh/id_ed25519_ctsapugay.pub`).
-- **open blockers:** none (see `progress/blockers.md`).
+- **updated:** 2026-09-02
+- **phase:** ✅ **DONE.** Goal condition met and verified. P-0001 + P-0002 approved (signed).
+  All six criteria G1–G6 `met` with evidence; `goals/goal-condition.md` state `met`.
+  `python3 tools/verify.py` GREEN (CHK-001…007); `python3 tools/validate.py` no errors, no
+  drift; 12 constraints held, 0 waived.
+- **run it:** `python3 web/server.py` → http://127.0.0.1:8765
+- **only open item (not a gate failure):** work is uncommitted — `validate.py` warns the
+  goal/criteria files + project code should be committed so history reflects the done state.
+  Awaiting Clara's go-ahead to commit. Optional follow-ups: vendor Three.js (offline
+  robustness); project README for the public repo.
+- **older phase note:** engine + scenes + interactive frontend + Q&A all built and working.
+- **now:** Everything is built and **`python3 tools/verify.py` = 7/7 GREEN**; `pytest tests/`
+  = 25 green. Engine (4 areas, provenance+verification), `engine/scene.py` (step-tagged
+  geometry), `engine/explain.py` (grounded Q&A), the suite (`suite/problems.json` +
+  `tools/run_suite.py`), and a **working local web app** (`python3 web/server.py` →
+  http://127.0.0.1:8765) with Three.js 3-D + orbit controls (G2), step-through (G3), grounded
+  ask box (G4), verified-results panel, and `docs/scope.md` (G6). Two proposals (P-0001 suite,
+  P-0002 checks) PENDING. **No criteria marked met yet** — deliberate; done in the finish pass
+  after approvals. Agent committed nothing (commit when Clara asks).
+- **watch:** Don't mark criteria met / goal met until P-0001 + P-0002 approved (else the finish
+  rests on unapproved checks). Frontend needs the pane VISIBLE for real canvas size + rAF (fps=0
+  when hidden) — measure G2 fps with the app in front. SymPy footgun: `sympify(expr,
+  locals=<real symbols>)` or derivatives are 0. Matrices: exact SymPy matrix (`nsimplify`), not
+  the float ndarray, or defective-eigen detection is lost. Secrets out of tracked files (public
+  repo). Signed governance (approval commits SSH-signed).
+- **open blockers:** effectively blocked on Clara's two approvals for the finish (see top). No
+  other in-scope, unblocked work remains that isn't past the finish line.

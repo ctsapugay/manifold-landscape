@@ -1,0 +1,65 @@
+{
+  "_comment": "The representative problem suite (proposal P-0001). Each problem carries its descriptor and an INDEPENDENTLY-derived reference for its key answers. tools/run_suite.py (CHK-001) solves each via the engine, confirms every displayed quantity is engine-produced and passed verification, and checks the key answers against these references. References are known closed-form values or, for L3, singular values computed via the eigenvalues of A^T A (a route independent of the engine's direct SVD).",
+  "problems": [
+    {
+      "id": "S1", "area": "scalar-fields", "title": "Paraboloid f = x^2 + y^2",
+      "descriptor": {"id": "S1", "area": "scalar-fields", "title": "Paraboloid f = x^2 + y^2", "expr": "x**2 + y**2"},
+      "references": {"critical_points": [{"point": [0, 0], "type": "minimum"}]}
+    },
+    {
+      "id": "S2", "area": "scalar-fields", "title": "Saddle f = x^2 - y^2",
+      "descriptor": {"id": "S2", "area": "scalar-fields", "title": "Saddle f = x^2 - y^2", "expr": "x**2 - y**2"},
+      "references": {"critical_points": [{"point": [0, 0], "type": "saddle"}]}
+    },
+    {
+      "id": "S3", "area": "scalar-fields", "title": "Ripples f = sin(x)cos(y)",
+      "descriptor": {"id": "S3", "area": "scalar-fields", "title": "Ripples f = sin(x)cos(y)", "expr": "sin(x)*cos(y)", "domain": [[-3.14159265, 3.14159265], [-3.14159265, 3.14159265]]},
+      "references": {"critical_values_include": [-1.0, 0.0, 1.0], "types_include": ["minimum", "maximum", "saddle"]}
+    },
+    {
+      "id": "O1", "area": "optimization", "title": "Anisotropic bowl f = x^2 + 3y^2",
+      "descriptor": {"id": "O1", "area": "optimization", "title": "Anisotropic bowl f = x^2 + 3y^2", "expr": "x**2 + 3*y**2", "start": [3.0, 2.0], "lr": 0.1, "steps": 80},
+      "references": {"minimum": {"point": [0, 0], "f": 0.0}, "descent_converges_to": [0, 0]}
+    },
+    {
+      "id": "O2", "area": "optimization", "title": "Rosenbrock valley",
+      "descriptor": {"id": "O2", "area": "optimization", "title": "Rosenbrock valley", "expr": "(1-x)**2 + 100*(y-x**2)**2", "start": [-1.0, 1.0], "lr": 0.001, "steps": 200, "domain": [[-2, 2], [-1, 3]]},
+      "references": {"minimum": {"point": [1, 1], "f": 0.0}}
+    },
+    {
+      "id": "O3", "area": "optimization", "title": "Constrained min x^2+y^2 s.t. x+y=1",
+      "descriptor": {"id": "O3", "area": "optimization", "subtype": "constrained", "title": "Constrained min x^2+y^2 s.t. x+y=1", "f": "x**2 + y**2", "g": "x + y - 1"},
+      "references": {"constrained_optimum": {"point": [0.5, 0.5], "f": 0.5, "lambda": 1.0}}
+    },
+    {
+      "id": "V1", "area": "vector-fields", "title": "Rotation F = (-y, x)",
+      "descriptor": {"id": "V1", "area": "vector-fields", "title": "Rotation F = (-y, x)", "components": ["-y", "x"], "vars": ["x", "y"]},
+      "references": {"divergence": 0.0, "curl": [2.0]}
+    },
+    {
+      "id": "V2", "area": "vector-fields", "title": "Source F = (x, y)",
+      "descriptor": {"id": "V2", "area": "vector-fields", "title": "Source F = (x, y)", "components": ["x", "y"], "vars": ["x", "y"]},
+      "references": {"divergence": 2.0, "curl": [0.0]}
+    },
+    {
+      "id": "V3", "area": "vector-fields", "title": "3-D F = (-y, x, z)",
+      "descriptor": {"id": "V3", "area": "vector-fields", "title": "3-D F = (-y, x, z)", "components": ["-y", "x", "z"], "vars": ["x", "y", "z"]},
+      "references": {"divergence": 1.0, "curl": [0.0, 0.0, 2.0]}
+    },
+    {
+      "id": "L1", "area": "linear-algebra", "title": "Symmetric [[2,1],[1,2]]",
+      "descriptor": {"id": "L1", "area": "linear-algebra", "title": "Symmetric [[2,1],[1,2]]", "matrix": [[2, 1], [1, 2]], "want": ["determinant", "eigen"]},
+      "references": {"determinant": 3.0, "eigenvalues": [3.0, 1.0], "defective": false}
+    },
+    {
+      "id": "L2", "area": "linear-algebra", "title": "Shear [[1,1],[0,1]]",
+      "descriptor": {"id": "L2", "area": "linear-algebra", "title": "Shear [[1,1],[0,1]]", "matrix": [[1, 1], [0, 1]], "want": ["determinant", "eigen"]},
+      "references": {"determinant": 1.0, "eigenvalues": [1.0], "defective": true}
+    },
+    {
+      "id": "L3", "area": "linear-algebra", "title": "3x3 SVD [[1,2,0],[0,1,2],[2,0,1]]",
+      "descriptor": {"id": "L3", "area": "linear-algebra", "title": "3x3 SVD [[1,2,0],[0,1,2],[2,0,1]]", "matrix": [[1, 2, 0], [0, 1, 2], [2, 0, 1]], "want": ["svd"]},
+      "references": {"singular_values": [3.0, 1.7320508, 1.7320508]}
+    }
+  ]
+}

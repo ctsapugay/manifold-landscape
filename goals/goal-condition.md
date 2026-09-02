@@ -9,8 +9,9 @@ agent's to soften: see `constraints/defaults.md` (C-GOVERNED-CHANGE) and
 
 ## Status
 
-- **state:** approved
+- **state:** met
 - **approved:** 2026-09-01 by Clara ("Looks good to me. I approve everything.")
+- **met:** 2026-09-02 — all six criteria (G1–G6) met with recorded evidence; `python3 tools/verify.py` GREEN (CHK-001…007, suite + battery approved via P-0001, P-0002); `python3 tools/validate.py` clean, no drift; all constraints held throughout.
 
 ## Statement
 

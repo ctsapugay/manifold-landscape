@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manifold Landscape</title>
+  <link rel="stylesheet" href="/style.css" />
+  <!-- Three.js from a pinned CDN for development. Vendor locally before "done" for
+       offline robustness (see progress/log.md). -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <aside id="sidebar">
+    <h1>Manifold&nbsp;Landscape</h1>
+    <p class="tagline">the geometry of continuous math, solved and verified</p>
+
+    <section>
+      <h2>Problem</h2>
+      <div id="catalog"></div>
+    </section>
+
+    <section id="step-section" hidden>
+      <h2>Step through</h2>
+      <div class="step-controls">
+        <button id="step-prev">‹</button>
+        <span id="step-label">—</span>
+        <button id="step-next">›</button>
+      </div>
+      <ol id="step-list"></ol>
+    </section>
+
+    <section id="quantities-section" hidden>
+      <h2>Verified results</h2>
+      <p class="hint">Every value below was computed by the engine and independently
+        checked. Nothing here comes from a language model.</p>
+      <div id="quantities"></div>
+    </section>
+
+    <section id="ask-section" hidden>
+      <h2>Ask about this problem</h2>
+      <div class="ask-row">
+        <input id="ask-input" type="text" placeholder="e.g. where is the minimum?" />
+        <button id="ask-btn">Ask</button>
+      </div>
+      <div id="ask-answer"></div>
+      <p class="hint" id="ask-grounding"></p>
+    </section>
+  </aside>
+
+  <main id="stage">
+    <div id="scene-title"></div>
+    <div id="canvas-holder"></div>
+    <div id="hud">drag to rotate · scroll to zoom · right-drag to pan</div>
+    <div id="loading" hidden>solving…</div>
+    <div id="error" hidden></div>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
