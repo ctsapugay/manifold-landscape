@@ -1,6 +1,6 @@
 ## P-0002 — Verification check battery for G2–G6 (and a regression net)
 
-- **status:** proposed
+- **status:** approved
 - **kind:** new-constraint
 - **targets:** checks/registry.md (CHK-002 … CHK-007); criteria G2, G3, G4, G5, G6
 - **proposed:** 2026-09-01
@@ -43,4 +43,4 @@
   forever; only *weakening* one later needs re-approval, which is the asymmetry governance
   enforces.
 
-- **approved:**
+- **approved:** 2026-09-02
