@@ -34,4 +34,49 @@ project's real behaviour, exit nonzero on failure, and not depend on network acc
 
 <!-- INTAKE / GOAL MODE: register the project's checks below this line. -->
 
-_No checks registered yet._
+## The representative problem suite
+
+Several criteria (G1–G5) are judged "for every problem in the approved representative
+suite." That suite is defined here and its composition is approved by Clara through
+proposal **P-0001** — so it is governed content the agent cannot quietly weaken to pass.
+It is **representative, not exhaustive**: it fixes the standard the four beachhead areas
+are held to, not every problem they could handle.
+
+The problems live as data in `suite/problems.json` (built during goal mode), each carrying
+its definition and an **independently-computed reference** for every quantity the tool
+displays. CHK-001 runs the whole suite through the engine and fails if any problem is
+missing, any displayed value disagrees with its independent reference, or any result lacks
+a passing verification record (constraint C-VERIFIED-MATH).
+
+| id | area | problem | core operation exercised |
+|----|------|---------|--------------------------|
+| S1 | scalar fields & surfaces | `f = x² + y²` | gradient; minimum (Hessian pos-def) |
+| S2 | scalar fields & surfaces | `f = x² − y²` | gradient; saddle (Hessian indefinite) |
+| S3 | scalar fields & surfaces | `f = sin(x)·cos(y)` | multiple critical points, mixed type |
+| O1 | gradients & optimization | `f = x² + 3y²` | gradient descent converging to min |
+| O2 | gradients & optimization | Rosenbrock `(1−x)² + 100(y−x²)²` | hard landscape; min at (1,1) |
+| O3 | gradients & optimization | min `x²+y²` s.t. `x+y=1` | Lagrange condition; constrained optimum |
+| V1 | vector fields | `F = (−y, x)` | curl without divergence |
+| V2 | vector fields | `F = (x, y)` | divergence without curl |
+| V3 | vector fields | `F = (−y, x, z)` | divergence and curl of a 3-D field |
+| L1 | linear algebra as geometry | `A = [[2,1],[1,2]]` | eigen-decomposition; determinant |
+| L2 | linear algebra as geometry | `A = [[1,1],[0,1]]` | shear; non-diagonalizable; determinant |
+| L3 | linear algebra as geometry | `A = [[1,2,0],[0,1,2],[2,0,1]]` | SVD; ellipsoid semi-axes |
+
+## CHK-001 — Suite solved and verified against independent references
+
+- **covers:** G1
+- **run:** python3 tools/run_suite.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+<!--
+Further checks are registered as their capabilities are built, each a governed addition
+(CLAUDE.md: "Register checks as you build ... a governed change — propose it like any
+other"): a sustained-frame-rate measurement (G2/C-INTERACTIVE), a step-through sync check
+(G3), a grounded-answer check (G4/C-GROUNDED-EXPLANATION), an end-to-end flow check (G5),
+and a scope-documentation check (G6). They are added when the thing they verify exists,
+so they are not registered red-and-hollow ahead of it.
+-->
+

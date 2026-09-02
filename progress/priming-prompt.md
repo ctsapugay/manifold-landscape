@@ -58,7 +58,44 @@ the goal condition next (via /goal). Do not start work until then.
 
 ## Step 2 — seed goal mode
 
-Use Claude Code's goal command and hand the session the goal condition — paste the block
-that `python3 tools/brief.py --goal` prints (the statement plus the criteria). The session
-then works toward that finish line under the constraints, following the persistence /
-blocker / checkpoint protocol in `CLAUDE.md`.
+After the session has oriented (Step 1), use Claude Code's goal command and paste the block
+below to hand it the finish line. It then works toward the goal condition under the
+constraints, following the persistence / blocker / checkpoint protocol in `CLAUDE.md`.
+
+```
+Enter goal mode on the Manifold Landscape project. Work toward the finish line below, inside
+the constraints, using your own judgment on everything the constraints don't fix. This
+finish line is governed — not yours to change; if something is wrong, propose it
+(commands/propose.md), don't edit it.
+
+GOAL: Manifold Landscape is a locally-run tool for building intuition in the geometry of
+continuous mathematics — scalar fields & surfaces, gradients & optimization landscapes,
+vector fields, and linear-algebra-as-geometry. It solves a problem with a verification-
+backed computation engine so the answer is trustworthy (the model is never the sole source
+of a math result — C-VERIFIED-MATH), presents it as an interactive 3D visualization the user
+can manipulate and step through, and explains the intuition while answering questions
+grounded in the actual computed state. Built to a standard suitable as portfolio work.
+
+DONE only when every criterion is met with real evidence AND python3 tools/verify.py is
+green AND every constraint held throughout. The authoritative criteria are in
+goals/criteria.md (python3 tools/brief.py --goal prints them live). In brief:
+  G1  Correct, verified solutions across all four areas — each matches an independent
+      reference, and every displayed value carries engine provenance + passing verification.
+  G2  Interactive 3D — rotate / zoom / pan, smooth, no perceptible lag.
+  G3  Step-through builds the visualization in sync — each step's geometry appears at its step.
+  G4  Grounded Q&A at any step — answers agree with the engine's computed values.
+  G5  Polished, unbroken end-to-end flow for every problem in the representative suite.
+  G6  Scope + future expansions (physics, 4D+) documented.
+
+Start from progress/checkpoint.md's "next". If this is the first goal-mode session, define
+and register the representative problem suite in checks/registry.md and bring it to Clara
+for approval before building against it. Re-ground with python3 tools/brief.py as you go.
+Keep working across unblocked fronts; stop only when blocked on all fronts or when a decision
+is genuinely dangerous. Log at breaks; keep the checkpoint current. Stop when the criteria
+are met and verify.py is green — then say so, don't work past the finish line.
+```
+
+> This box mirrors the **governed** goal condition (`goals/goal-condition.md`) and criteria
+> (`goals/criteria.md`); it is frozen with them. The source of truth is those files —
+> `python3 tools/brief.py --goal` prints them live. If a proposal ever changes the finish
+> line, refresh this box to match.
