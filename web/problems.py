@@ -14,8 +14,29 @@ from engine.scalar_field import ScalarField
 from engine.optimization import OptimizationLandscape, ConstrainedProblem
 from engine.vector_field import VectorField
 from engine.linalg import LinearTransformation
+from engine.dynamics import DynamicalSystem
 from engine.explain import Explainer
 from engine import scene as S
+
+
+def _dyn_domain(d: dict) -> tuple:
+    """The fixed-point search / flow-field domain for a dynamical system descriptor."""
+    if d.get("domain"):
+        return tuple(tuple(p) for p in d["domain"])
+    return tuple((-3.0, 3.0) for _ in d["vars"])
+
+
+def _dyn_solution(d: dict, pid: str, title: str):
+    ds = DynamicalSystem(d["components"], d["vars"])
+    return ds, ds.solve(
+        pid, title,
+        domain=_dyn_domain(d),
+        trajectories=d.get("trajectories"),
+        t_span=tuple(d.get("t_span", (0.0, 20.0))),
+        samples=int(d.get("samples", 2000)),
+        grid=int(d.get("grid", 7)),
+        chaotic=bool(d.get("chaotic", False)),
+    )
 
 
 def solve_descriptor(d: dict) -> dict:
@@ -39,6 +60,7 @@ def solve_descriptor(d: dict) -> dict:
             domain = tuple(tuple(p) for p in d.get("domain", ((-3, 3), (-3, 3))))
             scene = S.build_scalar_scene(field, ScalarField(d["f"]).solve(pid, title, domain),
                                          domain=domain)
+            scene["area"] = "optimization"
             scene["quantities"] = [q.to_dict() for q in sol.quantities]
             opt = sol.get("constrained_optimum").value
             scene["layers"].append({
@@ -66,6 +88,11 @@ def solve_descriptor(d: dict) -> dict:
         sol = T.solve(pid, title, want=want).require_verified()
         return S.build_linear_scene(T, sol)
 
+    if area == "dynamical-systems":
+        ds, sol = _dyn_solution(d, pid, title)
+        sol.require_verified()
+        return S.build_dynamics_scene(ds, sol, domain=_dyn_domain(d))
+
     raise ValueError(f"unknown area: {area!r}")
 
 
@@ -88,6 +115,8 @@ def solution_for(d: dict):
     if area == "linear-algebra":
         return LinearTransformation(d["matrix"]).solve(
             pid, title, want=tuple(d.get("want", ("determinant", "eigen"))))
+    if area == "dynamical-systems":
+        return _dyn_solution(d, pid, title)[1]
     raise ValueError(f"unknown area: {area!r}")
 
 
@@ -122,6 +151,19 @@ CATALOG: list[dict] = [
      "matrix": [[1, 1], [0, 1]], "want": ["determinant", "eigen"]},
     {"id": "L3", "area": "linear-algebra", "title": "3×3 SVD  [[1,2,0],[0,1,2],[2,0,1]]",
      "matrix": [[1, 2, 0], [0, 1, 2], [2, 0, 1]], "want": ["svd"]},
+    {"id": "D1", "area": "dynamical-systems", "title": "Stable spiral  ẋ=y, ẏ=−x−y",
+     "components": ["y", "-x - y"], "vars": ["x", "y"], "domain": [[-3, 3], [-3, 3]],
+     "trajectories": [[2.5, 0.0], [-2.0, 1.5]], "t_span": [0, 18], "samples": 1500},
+    {"id": "D2", "area": "dynamical-systems", "title": "Saddle  ẋ=x, ẏ=−y",
+     "components": ["x", "-y"], "vars": ["x", "y"], "domain": [[-3, 3], [-3, 3]],
+     "trajectories": [[0.1, 2.8], [-0.1, 2.8], [2.8, 0.1]], "t_span": [0, 3], "samples": 600},
+    {"id": "D3", "area": "dynamical-systems", "title": "Pendulum  ẋ=y, ẏ=−sin(x)",
+     "components": ["y", "-sin(x)"], "vars": ["x", "y"], "domain": [[-4, 4], [-3, 3]],
+     "trajectories": [[0.0, 1.0], [0.0, 2.4], [2.5, 0.0]], "t_span": [0, 14], "samples": 1200},
+    {"id": "D4", "area": "dynamical-systems", "title": "Lorenz attractor (chaos)",
+     "components": ["10*(y - x)", "x*(28 - z) - y", "x*y - 8*z/3"], "vars": ["x", "y", "z"],
+     "domain": [[-25, 25], [-30, 30], [0, 50]], "trajectories": [[1.0, 1.0, 1.0]],
+     "t_span": [0, 40], "samples": 4000, "chaotic": True},
 ]
 
 CATALOG_BY_ID = {d["id"]: d for d in CATALOG}

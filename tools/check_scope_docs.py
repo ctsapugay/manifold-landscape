@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""CHK — scope documentation (criterion G6).
+"""CHK — scope documentation (criterion G9).
 
 Confirms the repository documents the supported scope and the deferred expansions clearly.
-Fails if `docs/scope.md` is missing or does not name all four supported areas and the
-deferred expansions (at least physics and higher-than-three-dimensional visualization).
+Fails if `docs/scope.md` is missing or does not name all FIVE supported areas (including
+dynamical systems / ODEs) and the deferred expansions (at least PDEs, physics, and
+higher-than-three-dimensional visualization).
 """
 
 from __future__ import annotations
@@ -19,8 +20,10 @@ REQUIRED_AREAS = [
     ("gradient", "optimization"),
     ("vector field",),
     ("linear algebra",),
+    ("dynamical system", "ode"),  # the fifth area
 ]
 REQUIRED_DEFERRED = [
+    ("pde",),  # partial differential equations
     ("physics",),
     ("higher", "dimension"),  # "higher-dimensional" / "higher-than-three-dimensional"
 ]

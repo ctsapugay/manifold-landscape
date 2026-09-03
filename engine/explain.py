@@ -72,6 +72,14 @@ class Explainer:
             (("determinant", "det", "area", "volume", "scale factor"), self._determinant),
             (("eigen", "invariant direction"), self._eigen),
             (("singular", "svd", "ellipsoid", "principal ax"), self._svd),
+            (("equilibri", "fixed point", "fixed-point", "rest point", "steady state"),
+             self._fixed_points),
+            (("stabilit", "stable", "unstable", "spiral", "node", "phase portrait",
+              "classif", "sink", "source"), self._stability),
+            (("trajector", "flow", "integral curve", "orbit", "evolv", "solution curve",
+              "where does it go", "settle"), self._trajectory),
+            (("chaos", "chaotic", "sensitive", "lyapunov", "attractor", "butterfly"),
+             self._chaos),
         ]
 
     # --- composers (return (text, [source names]) or None) ---------------------
@@ -235,6 +243,71 @@ class Explainer:
                 "corresponding singular vectors are those axes' directions. The largest is "
                 "how much the map can stretch a unit vector, the smallest how much it can "
                 "shrink one.", ["svd"])
+
+    def _fixed_points(self):
+        if not self.has("fixed_points"):
+            return None
+        fps = self.q("fixed_points").value
+        if not fps:
+            return "This system has no equilibria (points where the flow stops) in the region shown.", ["fixed_points"]
+        parts = [f"{_fmt_point(fp['point'])} — {fp['type']}" for fp in fps]
+        return ("The equilibria, where ẋ = F(x) = 0 (the flow is momentarily at rest): "
+                + "; ".join(parts) + ". Their type says what the flow does nearby.",
+                ["fixed_points"])
+
+    def _stability(self):
+        if not self.has("stability"):
+            # a system may expose fixed_points without a separate stability read
+            return self._fixed_points()
+        entries = self.q("stability").value
+        if not entries:
+            return "There are no equilibria to classify in the region shown.", ["stability"]
+        parts = []
+        for e in entries:
+            eig = ", ".join(
+                (f"{v[0]:.3g}" if abs(v[1]) < 1e-9 else f"{v[0]:.3g}{v[1]:+.3g}i")
+                for v in e["eigenvalues"])
+            parts.append(f"{_fmt_point(e['point'])} is a {e['type']} (Jacobian eigenvalues {eig})")
+        return ("Stability comes from the Jacobian's eigenvalues at each equilibrium: "
+                + "; ".join(parts)
+                + ". Negative real parts pull the flow in, positive push it out, and an "
+                "imaginary part means it spirals.", ["stability"])
+
+    def _trajectory(self):
+        names = [q.name for q in self.sol.quantities if q.name.startswith("trajectory") and q.verified]
+        if not names:
+            return None
+        t = self.q(names[0]).value
+        text = (f"A trajectory starting at {_fmt_point(t['x0'])} follows the flow to "
+                f"{_fmt_point(t['final_point'])} over t ∈ [{t['t_span'][0]:g}, {t['t_span'][1]:g}]. "
+                "Each such curve is a solution of the system — the path a point takes as it "
+                "moves along the field.")
+        srcs = [names[0]]
+        if self.has("fixed_points"):
+            fps = self.q("fixed_points").value
+            attractors = [fp for fp in fps if "stable" in fp["type"] and "unstable" not in fp["type"]]
+            if attractors:
+                text += (" It is drawn toward the "
+                         + ", ".join(f"{fp['type']} at {_fmt_point(fp['point'])}" for fp in attractors) + ".")
+                srcs.append("fixed_points")
+        return text, srcs
+
+    def _chaos(self):
+        if not self.has("separation"):
+            return None
+        s = self.q("separation").value
+        lam = s["finite_time_lyapunov"]
+        chaotic = lam > 1e-3
+        text = (f"Sensitive dependence is measured directly: two trajectories starting "
+                f"{s['initial_separation']:.1e} apart grow to {s['final_separation']:.3g} apart "
+                f"by t = {s['t_span'][1]:g}, a mean exponential rate of about {lam:+.3f} per unit "
+                "time (a finite-time Lyapunov estimate). ")
+        text += ("A positive rate means nearby states pull apart exponentially — the hallmark "
+                 "of chaos: the long-term path is unpredictable even though every step is "
+                 "deterministic." if chaotic else
+                 "This rate is not positive, so nearby trajectories stay close — this behaviour "
+                 "is regular, not chaotic.")
+        return text, ["separation"]
 
     def _overview(self):
         lines, srcs = [], []

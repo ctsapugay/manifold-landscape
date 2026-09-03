@@ -1,0 +1,49 @@
+{
+  "_comment": "Held-out agent test set for criterion G2. Each case gives the raw user text, the input STYLE (equation | word | conceptual), the area it should map to (for in-scope), and whether it is part of the PROTECTED CORE (which must succeed 100%). 'expect' is 'solve' (the agent must interpret it, call a tool, and return a verified scene) or 'decline' (out of scope — must be honestly declined, never answered with a fabricated result). tools/check_agent_coverage.py runs the agent (offline brain, no network) over this set and requires >=90% overall success and 100% of the protected core. Additions to this set are free (they broaden coverage); the protected core is the bar that may not be quietly lowered.",
+  "cases": [
+    {"id": "AS1", "style": "equation", "area": "scalar-fields", "core": true, "expect": "solve", "text": "f = x^2 + y^2"},
+    {"id": "AS2", "style": "equation", "area": "scalar-fields", "core": true, "expect": "solve", "text": "f = x^2 - y^2"},
+    {"id": "AS3", "style": "equation", "area": "scalar-fields", "core": false, "expect": "solve", "text": "f = sin(x)*cos(y)"},
+    {"id": "AS4", "style": "word", "area": "scalar-fields", "core": true, "expect": "solve", "text": "plot the surface x^2 + y^2 and find its critical points"},
+    {"id": "AS5", "style": "word", "area": "scalar-fields", "core": false, "expect": "solve", "text": "what are the critical points of x*y"},
+    {"id": "AS6", "style": "conceptual", "area": "scalar-fields", "core": true, "expect": "solve", "text": "show me what a saddle looks like"},
+    {"id": "AS7", "style": "conceptual", "area": "scalar-fields", "core": false, "expect": "solve", "text": "give me an example of a monkey saddle"},
+
+    {"id": "AO1", "style": "equation", "area": "optimization", "core": true, "expect": "solve", "text": "minimize x^2 + 3*y^2"},
+    {"id": "AO2", "style": "word", "area": "optimization", "core": true, "expect": "solve", "text": "minimize x^2 + 3y^2 starting at (3, 2)"},
+    {"id": "AO3", "style": "word", "area": "optimization", "core": false, "expect": "solve", "text": "run gradient descent on (1-x)^2 + 100*(y-x^2)^2"},
+    {"id": "AO4", "style": "word", "area": "optimization", "core": true, "expect": "solve", "text": "minimize x^2 + y^2 subject to x + y = 1"},
+    {"id": "AO5", "style": "conceptual", "area": "optimization", "core": false, "expect": "solve", "text": "show me a gradient descent on an optimization landscape"},
+    {"id": "AO6", "style": "conceptual", "area": "optimization", "core": false, "expect": "solve", "text": "show me the Rosenbrock banana valley"},
+
+    {"id": "AV1", "style": "equation", "area": "vector-fields", "core": true, "expect": "solve", "text": "F = (-y, x)"},
+    {"id": "AV2", "style": "equation", "area": "vector-fields", "core": true, "expect": "solve", "text": "F = (x, y)"},
+    {"id": "AV3", "style": "equation", "area": "vector-fields", "core": false, "expect": "solve", "text": "the vector field F = (-y, x, z)"},
+    {"id": "AV4", "style": "word", "area": "vector-fields", "core": false, "expect": "solve", "text": "what is the divergence and curl of the field (x, y)"},
+    {"id": "AV5", "style": "conceptual", "area": "vector-fields", "core": true, "expect": "solve", "text": "show me a rotating vector field"},
+    {"id": "AV6", "style": "conceptual", "area": "vector-fields", "core": false, "expect": "solve", "text": "give me an example of a source field"},
+
+    {"id": "AL1", "style": "equation", "area": "linear-algebra", "core": true, "expect": "solve", "text": "[[2,1],[1,2]]"},
+    {"id": "AL2", "style": "equation", "area": "linear-algebra", "core": true, "expect": "solve", "text": "[[1,1],[0,1]]"},
+    {"id": "AL3", "style": "word", "area": "linear-algebra", "core": false, "expect": "solve", "text": "the singular values of [[1,2,0],[0,1,2],[2,0,1]]"},
+    {"id": "AL4", "style": "word", "area": "linear-algebra", "core": false, "expect": "solve", "text": "what are the eigenvalues of [[2,1],[1,3]]"},
+    {"id": "AL5", "style": "conceptual", "area": "linear-algebra", "core": true, "expect": "solve", "text": "show me an example of eigenvalues and eigenvectors"},
+    {"id": "AL6", "style": "conceptual", "area": "linear-algebra", "core": false, "expect": "solve", "text": "what does a shear transformation do"},
+
+    {"id": "AD1", "style": "equation", "area": "dynamical-systems", "core": true, "expect": "solve", "text": "x' = y, y' = -x - y"},
+    {"id": "AD2", "style": "equation", "area": "dynamical-systems", "core": true, "expect": "solve", "text": "dx/dt = x, dy/dt = -y"},
+    {"id": "AD3", "style": "word", "area": "dynamical-systems", "core": false, "expect": "solve", "text": "phase portrait of x' = y, y' = -sin(x)"},
+    {"id": "AD4", "style": "conceptual", "area": "dynamical-systems", "core": true, "expect": "solve", "text": "show me an example of chaos"},
+    {"id": "AD5", "style": "conceptual", "area": "dynamical-systems", "core": true, "expect": "solve", "text": "show me the Lorenz attractor"},
+    {"id": "AD6", "style": "conceptual", "area": "dynamical-systems", "core": false, "expect": "solve", "text": "show me a stable spiral"},
+    {"id": "AD7", "style": "conceptual", "area": "dynamical-systems", "core": false, "expect": "solve", "text": "show me a limit cycle"},
+    {"id": "AD8", "style": "conceptual", "area": "dynamical-systems", "core": false, "expect": "solve", "text": "show me the pendulum phase portrait"},
+
+    {"id": "AX1", "style": "equation", "area": null, "core": true, "expect": "decline", "text": "integrate x^2 dx from 0 to 1"},
+    {"id": "AX2", "style": "word", "area": null, "core": true, "expect": "decline", "text": "solve the heat equation on a rod"},
+    {"id": "AX3", "style": "word", "area": null, "core": true, "expect": "decline", "text": "what is the probability of rolling two sixes"},
+    {"id": "AX4", "style": "word", "area": null, "core": false, "expect": "decline", "text": "prove that there are infinitely many primes"},
+    {"id": "AX5", "style": "word", "area": null, "core": false, "expect": "decline", "text": "what's the weather in Paris today"},
+    {"id": "AX6", "style": "word", "area": null, "core": false, "expect": "decline", "text": "factor the polynomial x^2 - 5x + 6"}
+  ]
+}

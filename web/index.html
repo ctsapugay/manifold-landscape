@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Manifold Landscape</title>
   <link rel="stylesheet" href="/style.css" />
-  <!-- Three.js from a pinned CDN for development. Vendor locally before "done" for
-       offline robustness (see progress/log.md). -->
+  <!-- Three.js r160 vendored locally (web/vendor/) so the tool runs fully offline — no
+       runtime CDN dependency (the goal's "locally-run" descriptor). -->
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      "three": "/vendor/three/three.module.js",
+      "three/addons/": "/vendor/three/addons/"
     }
   }
   </script>
@@ -19,38 +19,56 @@
 <body>
   <aside id="sidebar">
     <h1>Manifold&nbsp;Landscape</h1>
-    <p class="tagline">the geometry of continuous math, solved and verified</p>
+    <p class="tagline">an AI tutor for the geometry of continuous math —
+      <span id="brain-badge" class="badge-neutral">…</span></p>
 
     <section>
-      <h2>Problem</h2>
-      <div id="catalog"></div>
+      <h2>Pose a problem</h2>
+      <p class="hint">An equation, a word problem, or an open request. The agent interprets it,
+        calls the tools, and shows you the geometry.</p>
+      <div class="ask-row">
+        <input id="prompt-input" type="text"
+               placeholder="e.g. f = x^2 - y^2   ·   show me an example of chaos" />
+        <button id="solve-btn">Solve</button>
+      </div>
+      <div id="examples"></div>
     </section>
 
-    <section id="step-section" hidden>
-      <h2>Step through</h2>
-      <div class="step-controls">
-        <button id="step-prev">‹</button>
-        <span id="step-label">—</span>
-        <button id="step-next">›</button>
-      </div>
-      <ol id="step-list"></ol>
+    <section id="answer-section" hidden>
+      <h2>Answer</h2>
+      <div id="answer-text"></div>
+      <div id="model-derived" class="warn-badge" hidden>⚠ model-derived · unverified</div>
+      <button id="trace-toggle" class="linkish" aria-expanded="false">▸ show the agent's tool calls</button>
+      <div id="trace-panel" hidden></div>
     </section>
 
     <section id="quantities-section" hidden>
       <h2>Verified results</h2>
-      <p class="hint">Every value below was computed by the engine and independently
-        checked. Nothing here comes from a language model.</p>
+      <p class="hint">Every value below was computed by a tool and independently checked.</p>
       <div id="quantities"></div>
     </section>
 
-    <section id="ask-section" hidden>
-      <h2>Ask about this problem</h2>
-      <div class="ask-row">
-        <input id="ask-input" type="text" placeholder="e.g. where is the minimum?" />
-        <button id="ask-btn">Ask</button>
+    <section id="walk-section" hidden>
+      <h2>Walkthrough</h2>
+      <p class="hint">Optional. Build the scene one step at a time.</p>
+      <button id="walk-btn">▶ Walk me through it</button>
+      <div id="walk-controls" hidden>
+        <div class="step-controls">
+          <button id="step-prev">‹</button>
+          <span id="step-label">—</span>
+          <button id="step-next">›</button>
+        </div>
+        <ol id="step-list"></ol>
       </div>
-      <div id="ask-answer"></div>
-      <p class="hint" id="ask-grounding"></p>
+    </section>
+
+    <section id="chat-section" hidden>
+      <h2>Ask a follow-up</h2>
+      <div id="chat-log"></div>
+      <div class="ask-row">
+        <input id="chat-input" type="text" placeholder="e.g. where is the minimum?" />
+        <button id="chat-send">Ask</button>
+      </div>
     </section>
   </aside>
 
@@ -58,7 +76,7 @@
     <div id="scene-title"></div>
     <div id="canvas-holder"></div>
     <div id="hud">drag to rotate · scroll to zoom · right-drag to pan</div>
-    <div id="loading" hidden>solving…</div>
+    <div id="thinking" hidden><span class="spinner"></span> the agent is thinking…</div>
     <div id="error" hidden></div>
   </main>
 

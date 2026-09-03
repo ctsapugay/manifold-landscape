@@ -9,10 +9,15 @@ agent's to soften: see `constraints/defaults.md` (C-GOVERNED-CHANGE) and
 
 ## Status
 
-- **state:** approved
+- **state:** met
 - **approved:** 2026-09-02 by Clara — expanded scope (agentic AI tutor; arbitrary problem
   intake; fifth area, dynamical systems). The prior, narrower goal was met and shipped on
   2026-09-02 (commit `f3d98d6`) and now serves as the foundation this expansion builds on.
+- **met:** 2026-09-02 — all nine criteria G1–G9 are `met` with recorded evidence in
+  `goals/criteria.md`; `python3 tools/verify.py` is GREEN (CHK-001…012 all passing, 0 waived);
+  every constraint held throughout. The one governed change needed (P-0003, registering the
+  agent checks + the ODE protected core) was approved by Clara this session and recorded as a
+  signed, agent-executed approval (`--on-behalf-of-clara`).
 - **history:** original goal approved 2026-09-01 ("Looks good to me. I approve everything.")
   and met 2026-09-02 (six criteria, verify.py green); superseded by this expansion.
 

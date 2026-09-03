@@ -43,7 +43,20 @@ class OptimizationLandscape:
         traj = [p.copy()]
         fvals = [self.field.f(p)]
         for _ in range(steps):
-            p = p - lr * self.field.grad_num(p)
+            g = self.field.grad_num(p)
+            fp = fvals[-1]
+            # Backtracking line search: shrink the step until the objective does not
+            # increase (and stays finite). This keeps descent well-defined on hard or
+            # steep landscapes (e.g. Rosenbrock) where a fixed step would diverge, so the
+            # non-increasing property that verifies the trajectory always holds.
+            step = float(lr)
+            cand = p - step * g
+            fc = self.field.f(cand)
+            while step > 1e-15 and (not np.isfinite(fc) or fc > fp + 1e-12):
+                step *= 0.5
+                cand = p - step * g
+                fc = self.field.f(cand)
+            p = cand
             traj.append(p.copy())
             fvals.append(self.field.f(p))
         increases = [fvals[i + 1] - fvals[i] for i in range(len(fvals) - 1)]

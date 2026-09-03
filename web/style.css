@@ -10,6 +10,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0;
@@ -82,25 +83,80 @@ body { display: flex; height: 100vh; overflow: hidden; }
 .badge { font-size: 10.5px; color: var(--good); }
 .badge .prov { color: var(--ink-dim); }
 
-/* ---- ask ---- */
+/* ---- inputs (pose a problem / chat) ---- */
 .ask-row { display: flex; gap: 6px; margin-bottom: 8px; }
-#ask-input {
+.ask-row input {
   flex: 1; background: var(--panel-2); color: var(--ink);
   border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12.5px;
 }
-#ask-input:focus { outline: none; border-color: var(--accent); }
-#ask-btn {
+.ask-row input:focus { outline: none; border-color: var(--accent); }
+.ask-row button {
   background: var(--accent); color: #06121f; border: none; border-radius: 8px;
   padding: 0 14px; font-weight: 600; cursor: pointer;
 }
-#ask-btn:disabled { opacity: .5; cursor: default; }
-#ask-answer {
+.ask-row button:disabled { opacity: .5; cursor: default; }
+
+/* ---- brain badge ---- */
+#brain-badge { font-weight: 600; }
+.badge-claude { color: var(--accent); }
+.badge-neutral { color: var(--ink-dim); }
+
+/* ---- answer + trace ---- */
+#answer-text {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
-  padding: 10px 12px; font-size: 13px; white-space: pre-wrap; min-height: 10px;
-  display: none;
+  padding: 11px 13px; font-size: 13px; white-space: pre-wrap;
 }
-#ask-answer.show { display: block; }
-#ask-grounding { margin-top: 6px; }
+.warn-badge {
+  display: inline-block; margin-top: 8px; font-size: 11px; color: #f0b429;
+  border: 1px solid #6b5417; background: #2a2410; border-radius: 6px; padding: 3px 8px;
+}
+.linkish {
+  background: none; border: none; color: var(--accent); cursor: pointer;
+  font-size: 12px; padding: 8px 0 4px; display: block;
+}
+#trace-panel {
+  background: #10141a; border: 1px solid var(--line); border-radius: 8px;
+  padding: 9px 11px; font-size: 11.5px; margin-top: 4px;
+}
+.tinterp { color: var(--ink-dim); margin-bottom: 6px; }
+.tcall { margin: 4px 0; word-break: break-word; }
+.tcall code { color: var(--ink); font-size: 11px; }
+.tcall .ok { color: var(--good); }
+.tcall .bad { color: #ff7b72; }
+
+/* ---- walkthrough button ---- */
+#walk-btn {
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 12.5px; margin-bottom: 8px;
+}
+#walk-btn:hover { border-color: var(--accent); }
+
+/* ---- chat ---- */
+#chat-log { margin-bottom: 8px; max-height: 260px; overflow-y: auto; }
+.bubble {
+  border-radius: 8px; padding: 8px 11px; margin: 6px 0; font-size: 12.5px;
+  white-space: pre-wrap; border: 1px solid var(--line);
+}
+.bubble.you { background: #1a2430; }
+.bubble.tutor { background: var(--panel-2); }
+.bubble .who {
+  display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--ink-dim); margin-bottom: 3px;
+}
+
+/* ---- thinking indicator ---- */
+#thinking {
+  position: absolute; top: 16px; right: 20px; z-index: 4;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+  padding: 7px 14px; font-size: 12px; color: var(--ink-dim);
+  display: flex; align-items: center; gap: 8px;
+}
+.spinner {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--line); border-top-color: var(--accent);
+  display: inline-block; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---- stage ---- */
 #stage { flex: 1; position: relative; }

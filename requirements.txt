@@ -6,3 +6,7 @@ sympy>=1.12
 scipy>=1.11
 mpmath>=1.3
 pytest>=8.0
+# The AI-tutor agent's live path calls the Anthropic (Claude) API. Optional: without it (or
+# without a key in .env) the app falls back to the deterministic offline brain. Imported
+# lazily, so the engine, the checks, and the offline path never need it.
+anthropic>=0.40

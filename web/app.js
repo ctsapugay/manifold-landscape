@@ -37,6 +37,17 @@ window.addEventListener("resize", resize);
 
 function animate() {
   requestAnimationFrame(animate);
+  // tutor-driven view easing — runs every frame, independent of any agent request, so the
+  // scene stays smooth while the agent thinks (constraint C-INTERACTIVE)
+  if (focusTarget) {
+    controls.target.lerp(focusTarget, 0.1);
+    if (focusCamPos) camera.position.lerp(focusCamPos, 0.1);
+    if (controls.target.distanceTo(focusTarget) < 0.01) { focusTarget = null; focusCamPos = null; }
+  }
+  if (highlightMarker.visible) {
+    const s = 1 + 0.18 * Math.sin(performance.now() * 0.005);
+    highlightMarker.scale.setScalar(s);
+  }
   controls.update();
   renderer.render(scene, camera);
   _frames++;
@@ -58,6 +69,15 @@ let maxStep = 0;
 let steps = [];
 let currentId = null;
 let _frames = 0, _fps = 0, _lastFpsT = performance.now();
+
+// tutor-driven view: an eased focus target + a pulsing highlight marker (criterion G5)
+let focusTarget = null;      // THREE.Vector3 the controls ease toward
+let focusCamPos = null;      // THREE.Vector3 the camera eases toward
+const highlightMarker = new THREE.Mesh(
+  new THREE.SphereGeometry(0.32, 24, 24),
+  new THREE.MeshBasicMaterial({ color: 0xffd166, wireframe: true, transparent: true, opacity: 0.9 }));
+highlightMarker.visible = false;
+scene.add(highlightMarker);
 
 const V = (p) => new THREE.Vector3(p[0], p[1], (p[2] || 0) * zScale);
 
@@ -299,69 +319,149 @@ window.__ml = {
   },
 };
 
+// Drive the view to a feature the tutor is explaining (criterion G5). ``target`` is a raw
+// scene-space point [x, y, z]; it is mapped through the same V() transform the geometry uses.
+function focusOn(target) {
+  const p = V(target);
+  focusTarget = p.clone();
+  highlightMarker.position.copy(p);
+  highlightMarker.visible = true;
+  // ease the camera in while keeping its current viewing direction
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  const r = new THREE.Box3().setFromObject(contentGroup).getBoundingSphere(new THREE.Sphere()).radius || 3;
+  focusCamPos = p.clone().addScaledVector(dir, Math.max(r * 0.9, 2.5));
+}
+function clearHighlight() {
+  highlightMarker.visible = false;
+  focusTarget = null; focusCamPos = null;
+}
+window.__ml.focusOn = focusOn;
+
 // ---------------------------------------------------------------- UI ----------
-const catalogEl = document.getElementById("catalog");
-const stepSection = document.getElementById("step-section");
-const stepList = document.getElementById("step-list");
-const stepLabel = document.getElementById("step-label");
-const qSection = document.getElementById("quantities-section");
-const qEl = document.getElementById("quantities");
-const titleEl = document.getElementById("scene-title");
-const loadingEl = document.getElementById("loading");
-const errorEl = document.getElementById("error");
+const $ = (id) => document.getElementById(id);
+const stepList = $("step-list");
+const stepLabel = $("step-label");
+const qSection = $("quantities-section");
+const qEl = $("quantities");
+const titleEl = $("scene-title");
+const thinkingEl = $("thinking");
+const errorEl = $("error");
+const answerSection = $("answer-section");
+const answerText = $("answer-text");
+const modelDerived = $("model-derived");
+const tracePanel = $("trace-panel");
+const traceToggle = $("trace-toggle");
+const walkSection = $("walk-section");
+const walkBtn = $("walk-btn");
+const walkControls = $("walk-controls");
+const chatSection = $("chat-section");
+const chatLog = $("chat-log");
+const brainBadge = $("brain-badge");
 
-const AREA_NAMES = {
-  "scalar-fields": "Scalar fields & surfaces",
-  "optimization": "Gradients & optimization",
-  "vector-fields": "Vector fields",
-  "linear-algebra": "Linear algebra as geometry",
-};
+const SESSION = Math.random().toString(36).slice(2);
 
-async function loadCatalog() {
-  const items = await (await fetch("/api/catalog")).json();
-  const byArea = {};
-  for (const it of items) (byArea[it.area] ||= []).push(it);
-  for (const [area, list] of Object.entries(byArea)) {
-    const group = document.createElement("div");
-    group.className = "area-group";
-    group.innerHTML = `<div class="area-name">${AREA_NAMES[area] || area}</div>`;
-    for (const it of list) {
+const EXAMPLES = [
+  ["Surfaces", ["f = x^2 + y^2", "f = x^2 - y^2", "f = sin(x)*cos(y)"]],
+  ["Optimization", ["minimize x^2 + 3y^2 starting at (3,2)",
+                    "minimize x^2 + y^2 subject to x + y = 1"]],
+  ["Vector fields", ["F = (-y, x)", "F = (x, y)"]],
+  ["Linear algebra", ["[[2,1],[1,2]]", "the SVD of [[1,2,0],[0,1,2],[2,0,1]]"]],
+  ["Dynamical systems", ["x' = y, y' = -x - y", "show me an example of chaos"]],
+];
+
+function buildExamples() {
+  const host = $("examples");
+  for (const [name, prompts] of EXAMPLES) {
+    const g = document.createElement("div");
+    g.className = "area-group";
+    g.innerHTML = `<div class="area-name">${name}</div>`;
+    for (const p of prompts) {
       const b = document.createElement("button");
-      b.className = "problem"; b.textContent = it.title; b.dataset.id = it.id;
-      b.onclick = () => selectProblem(it.id, b);
-      group.appendChild(b);
+      b.className = "problem"; b.textContent = p;
+      b.onclick = () => { promptInput.value = p; submitProblem(p); };
+      g.appendChild(b);
     }
-    catalogEl.appendChild(group);
+    host.appendChild(g);
   }
 }
 
-async function selectProblem(id, btn) {
-  document.querySelectorAll(".problem").forEach((b) => b.classList.remove("active"));
-  if (btn) btn.classList.add("active");
-  errorEl.hidden = true; loadingEl.hidden = false;
+async function loadHealth() {
   try {
-    const res = await fetch(`/api/scene?id=${encodeURIComponent(id)}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "solve failed");
-    titleEl.textContent = data.title;
-    buildScene(data);
-    showQuantities(data.quantities);
-    stepSection.hidden = false;
-    currentId = id;
-    document.getElementById("ask-section").hidden = false;
-    document.getElementById("ask-answer").classList.remove("show");
-    document.getElementById("ask-grounding").textContent = "";
+    const h = await (await fetch("/api/agent/health")).json();
+    brainBadge.textContent = h.claude_available ? `Claude · ${h.model}` : "offline engine";
+    brainBadge.className = h.claude_available ? "badge-claude" : "badge-neutral";
+  } catch { brainBadge.textContent = "offline engine"; }
+}
+
+// --- talking to the agent ----------------------------------------------------
+
+let busy = false;
+async function postAgent(text) {
+  if (busy || !text.trim()) return null;
+  busy = true; errorEl.hidden = true; thinkingEl.hidden = false;
+  try {
+    const res = await fetch("/api/agent", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session: SESSION, text }),
+    });
+    return await res.json();
   } catch (e) {
-    errorEl.hidden = false; errorEl.textContent = "Could not solve: " + e.message;
+    errorEl.hidden = false; errorEl.textContent = "Request failed: " + e.message;
+    return null;
   } finally {
-    loadingEl.hidden = true;
+    thinkingEl.hidden = true; busy = false;
   }
 }
+
+async function submitProblem(text) {
+  const r = await postAgent(text);
+  if (r) renderResult(text, r);
+}
+
+function renderResult(userText, r) {
+  applyDirectives(r.directives || []);
+  const isSolve = (r.trace?.tool_sequence || []).some((t) => t.startsWith("solve_"));
+  if (r.scene && isSolve) {
+    newProblem(r);
+  } else if (answerSection.hidden) {
+    answerText.textContent = r.answer;
+    modelDerived.hidden = !r.model_derived;
+    renderTrace(r.trace);
+    answerSection.hidden = false;
+  } else {
+    appendChat("you", userText);
+    appendChat("tutor", r.answer);
+    chatSection.hidden = false;
+  }
+}
+
+function newProblem(r) {
+  clearHighlight();
+  titleEl.textContent = (r.scene && r.scene.title) || "";
+  buildScene(r.scene);              // shows the finished scene — no forced stepping (G4)
+  showQuantities(r.quantities || []);
+  answerText.textContent = r.answer;
+  modelDerived.hidden = !r.model_derived;
+  renderTrace(r.trace);
+  answerSection.hidden = false;
+  qSection.hidden = !(r.quantities || []).length;
+  walkReset(r.walkthrough || []);
+  chatLog.innerHTML = "";
+  chatSection.hidden = false;
+  applyDirectives(r.directives || []);
+}
+
+function applyDirectives(dirs) {
+  for (const d of dirs) {
+    if (d && d.type === "focus" && Array.isArray(d.target)) focusOn(d.target);
+  }
+}
+
+// --- rendering pieces --------------------------------------------------------
 
 function renderStepList() {
   const introduced = steps.map((s) => s.introduces);
-  stepLabel.textContent = currentStep === 0
-    ? "base scene" : `step ${currentStep} of ${maxStep}`;
+  stepLabel.textContent = currentStep === 0 ? "base scene" : `step ${currentStep} of ${maxStep}`;
   stepList.innerHTML = "";
   introduced.forEach((name, i) => {
     const stepIdx = steps[i].step;
@@ -389,42 +489,72 @@ function showQuantities(quantities) {
   qSection.hidden = quantities.length === 0;
 }
 
+function renderTrace(trace) {
+  if (!trace || !trace.calls) { tracePanel.innerHTML = ""; return; }
+  const rows = trace.calls.map((c) => {
+    const badge = c.ok
+      ? (c.verified ? '<span class="ok">✓ verified</span>'
+                    : (c.produced && c.produced.length ? '<span class="ok">ok</span>' : '<span class="ok">ok</span>'))
+      : '<span class="bad">error</span>';
+    const prov = (c.provenance || []).length ? ` · via ${(c.provenance).join(", ")}` : "";
+    return `<div class="tcall"><code>${escapeHtml(c.tool)}(${escapeHtml(JSON.stringify(c.input))})</code>`
+         + ` ${badge}${prov}</div>`;
+  }).join("");
+  tracePanel.innerHTML =
+    `<div class="tinterp">interpretation: ${escapeHtml(trace.interpretation || "—")}</div>`
+    + (rows || '<div class="tcall">no tools called (answered from the current problem)</div>');
+}
+
+function appendChat(who, text) {
+  const div = document.createElement("div");
+  div.className = "bubble " + (who === "you" ? "you" : "tutor");
+  div.innerHTML = `<span class="who">${who}</span> ${escapeHtml(text)}`;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
 
-document.getElementById("step-prev").onclick = () => setStep(currentStep - 1);
-document.getElementById("step-next").onclick = () => setStep(currentStep + 1);
+// --- walkthrough (opt-in) ----------------------------------------------------
 
-const askInput = document.getElementById("ask-input");
-const askBtn = document.getElementById("ask-btn");
-const askAnswer = document.getElementById("ask-answer");
-const askGrounding = document.getElementById("ask-grounding");
-
-async function ask() {
-  const question = askInput.value.trim();
-  if (!question || !currentId) return;
-  askBtn.disabled = true;
-  askAnswer.classList.add("show");
-  askAnswer.textContent = "…";
-  askGrounding.textContent = "";
-  try {
-    const res = await fetch("/api/ask", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: currentId, question }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "no answer");
-    askAnswer.textContent = data.answer;
-    askGrounding.textContent = "grounded in verified results: " + data.grounded_in.join(", ");
-  } catch (e) {
-    askAnswer.textContent = "Could not answer: " + e.message;
-  } finally {
-    askBtn.disabled = false;
-  }
+function walkReset(walkthrough) {
+  walkSection.hidden = !(walkthrough && walkthrough.length);
+  walkControls.hidden = true;
+  walkBtn.hidden = false;
+  setStep(maxStep); // default: the finished scene
 }
-askBtn.onclick = ask;
-askInput.addEventListener("keydown", (e) => { if (e.key === "Enter") ask(); });
+walkBtn.onclick = () => { walkControls.hidden = false; walkBtn.hidden = true; setStep(0); };
+$("step-prev").onclick = () => setStep(currentStep - 1);
+$("step-next").onclick = () => setStep(currentStep + 1);
 
-loadCatalog();
+// --- trace toggle (G7) -------------------------------------------------------
+
+traceToggle.onclick = () => {
+  const show = tracePanel.hidden;
+  tracePanel.hidden = !show;
+  traceToggle.setAttribute("aria-expanded", String(show));
+  traceToggle.textContent = (show ? "▾ hide" : "▸ show") + " the agent's tool calls";
+};
+
+// --- inputs ------------------------------------------------------------------
+
+const promptInput = $("prompt-input");
+$("solve-btn").onclick = () => submitProblem(promptInput.value);
+promptInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submitProblem(promptInput.value); });
+
+const chatInput = $("chat-input");
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  chatInput.value = "";
+  const r = await postAgent(text);
+  if (r) renderResult(text, r);
+}
+$("chat-send").onclick = sendChat;
+chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat(); });
+
+buildExamples();
+loadHealth();
 animate(); // start the render loop once all module state is initialized

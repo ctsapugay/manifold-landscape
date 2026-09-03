@@ -123,6 +123,26 @@ def check_references(sol, refs):
             exp = sorted(expected, reverse=True)
             if len(got) != len(exp) or not all(_close(a, b, 1e-4) for a, b in zip(got, exp)):
                 raise Fail(f"singular values {got}, expected {exp}")
+        elif key == "fixed_points":
+            # Dynamical systems: each expected equilibrium must be found near its known
+            # location and classified with the known stability type (matched as a
+            # substring, so "centre (linearisation marginal…)" satisfies "centre").
+            fps = need("fixed_points")
+            for exp in expected:
+                match = [c for c in fps if _point_close(c["point"], exp["point"], 1e-2)]
+                if not match:
+                    raise Fail(f"no equilibrium near {exp['point']} "
+                               f"(found {[[round(v,3) for v in c['point']] for c in fps]})")
+                if exp["type"].lower() not in match[0]["type"].lower():
+                    raise Fail(f"equilibrium {exp['point']} is '{match[0]['type']}', "
+                               f"expected type containing '{exp['type']}'")
+        elif key == "chaotic":
+            # The sensitive-dependence measurement must have a positive finite-time
+            # Lyapunov estimate for a system claimed chaotic (or non-positive if not).
+            lam = need("separation")["finite_time_lyapunov"]
+            if bool(expected) != (lam > 1e-3):
+                raise Fail(f"finite-time Lyapunov {lam:.4g}; expected "
+                           f"{'positive (chaotic)' if expected else 'non-positive (regular)'}")
         else:
             raise Fail(f"unknown reference key '{key}'")
 

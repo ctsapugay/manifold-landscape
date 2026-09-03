@@ -268,3 +268,88 @@ def build_linear_scene(T, solution: Solution, res: int = 96) -> dict:
         except KeyError:
             pass
     return scene
+
+
+# --- dynamical systems (ODEs) ------------------------------------------------
+
+_EQUILIBRIUM_COLORS = (  # matched by substring, first hit wins
+    ("stable spiral", "#2c7fb8"),
+    ("unstable spiral", "#d7301f"),
+    ("saddle-focus", "#d7301f"),
+    ("stable node", "#2c7fb8"),
+    ("unstable node", "#d7301f"),
+    ("stable", "#2c7fb8"),
+    ("unstable", "#d7301f"),
+    ("source", "#d7301f"),
+    ("sink", "#2c7fb8"),
+    ("saddle", "#756bb1"),
+    ("centre", "#31a354"),
+    ("non-hyperbolic", "#999999"),
+)
+
+
+def _equilibrium_color(kind: str) -> str:
+    k = kind.lower()
+    for needle, color in _EQUILIBRIUM_COLORS:
+        if needle in k:
+            return color
+    return "#cccccc"
+
+
+def build_dynamics_scene(ds, solution: Solution, domain, res: int = 13) -> dict:
+    """A phase portrait: the flow field, its equilibria (coloured by stability), and the
+    integral curves that flow through it. In 2-D this lives in the phase plane (z = 0); in
+    3-D (a Lorenz-type system) the trajectory is the attractor itself in space.
+
+    Layers are step-tagged so the walkthrough reveals exactly a step's geometry: step 0 the
+    flow field, step 1 the equilibria, step 3 the trajectories (step 2 — stability — and
+    step 4 — sensitive dependence — re-read the geometry already shown rather than adding
+    new meshes)."""
+    dim = ds.dim
+    scene = _base(solution, (domain[0], domain[1]))
+
+    # step 0 — the flow field F(x)
+    axes = [np.linspace(lo, hi, res if dim == 2 else max(4, res // 3)) for (lo, hi) in domain]
+    arrows = []
+    if dim == 2:
+        for x in axes[0]:
+            for y in axes[1]:
+                v = ds.F_num([x, y])
+                arrows.append({"origin": [float(x), float(y), 0.0],
+                               "vector": [float(v[0]), float(v[1]), 0.0]})
+    else:
+        for x in axes[0]:
+            for y in axes[1]:
+                for z in axes[2]:
+                    v = ds.F_num([x, y, z])
+                    arrows.append({"origin": [float(x), float(y), float(z)],
+                                   "vector": [float(v[0]), float(v[1]), float(v[2])]})
+    scene["layers"].append({"id": "flow_field", "type": "vectors", "step": 0,
+                            "label": "flow field ẋ = F(x)", "data": {"arrows": arrows}})
+
+    # step 1 — equilibria, coloured by stability
+    try:
+        fps = solution.get("fixed_points").value
+        pts = []
+        for fp in fps:
+            p = fp["point"]
+            pos = [float(p[0]), float(p[1]), float(p[2]) if dim == 3 else 0.0]
+            pts.append({"position": pos, "type": fp["type"],
+                        "color": _equilibrium_color(fp["type"])})
+        if pts:
+            scene["layers"].append({"id": "fixed_points", "type": "points", "step": 1,
+                                    "label": "equilibria F = 0 (colour = stability)",
+                                    "data": {"points": pts}})
+    except KeyError:
+        pass
+
+    # step 3 — trajectories (integral curves)
+    for q in solution.quantities:
+        if q.name.startswith("trajectory"):
+            pts = [[float(c) for c in row] for row in q.value["points"]]
+            scene["layers"].append({
+                "id": q.name, "type": "polyline", "step": 3,
+                "label": "trajectory (an integral curve of the flow)",
+                "data": {"points": pts, "start": pts[0], "end": pts[-1]},
+            })
+    return scene

@@ -602,3 +602,63 @@ reader: state, not narrative.
 - APPROVED: P-0003
 - Clara's stated authority, verbatim: "Yes. I approve. Go ahead and run the approval for me. I'm giving you permission and telling you that I approve."
 - Attribution mode makes this an audit record, not proof the authority was real. Enable signing (docs/governance.md) for approval the agent cannot forge.
+
+## 2026-09-02 — DONE: goal condition met and verified (agentic-tutor expansion)
+
+- **state:** ✅ **COMPLETE.** Clara approved P-0003 this session (delegated, signed,
+  agent-executed with her verbatim authorization). All nine criteria **G1–G9 are `met`** with
+  recorded evidence in `goals/criteria.md`; `goals/goal-condition.md` state set to `met`.
+- **gate (all satisfied):**
+  - `python3 tools/verify.py` → GREEN, CHK-001…012 all passing, 0 waived.
+  - `python3 tools/validate.py` → no ERRORS; 9/9 criteria met; completion gate satisfied;
+    governance engaged & signed, no drift. (Two warnings only: the 9-criteria heuristic —
+    justified, each is a distinct checkable outcome; and uncommitted governed files —
+    git hygiene from the criteria/goal edits, offered to Clara to commit.)
+  - All 12 constraints held throughout, 0 waived.
+- **what was delivered (on the shipped foundation):** the **agentic AI tutor**. A user poses a
+  problem in any form (equation / word problem / open conceptual) across **five areas**
+  (added dynamical systems / ODEs) and an **AI agent orchestrates deterministic tools** to
+  solve, visualize, and explain it — every displayed value tool-computed + verified, or
+  labelled model-derived (a genuine last resort). Default = answer + interactive 3D (no forced
+  stepping); **opt-in walkthrough** builds the scene in sync; the **tutor drives the view**
+  (camera + highlight) on focusing questions; **multi-turn grounded chat**; **tool-call
+  transparency toggle** + **thinking indicator**; scene stays smooth while the agent thinks
+  (0.367 ms/frame on Lorenz). Real product uses Claude (`agent/claude_brain.py`, lazy SDK,
+  key from `.env`); a deterministic `OfflineBrain` drives the offline checks and is the no-key
+  fallback. Three.js vendored → runs fully offline. Engine 5th area: `engine/dynamics.py`.
+- **P-0003:** approved (signed commit `92dc86016ccf`, `--on-behalf-of-clara`). Registered
+  CHK-008…012 and added ODE canonicals D1–D4 to the protected core.
+- **standing policy from Clara (this session):** append-only additions (new constraints/
+  checks) are auto-approved; editing or removing existing ones still needs her sign-off.
+- **open item (not a gate failure):** `goals/criteria.md` + `goals/goal-condition.md` edits are
+  uncommitted (the criteria/goal `state`+`evidence` are excluded from the governed digest, so
+  this is not drift — just git history). Awaiting Clara's go-ahead to commit (harness: commit
+  when asked). To run the app: `python3 web/server.py` → http://127.0.0.1:8765.
+- **dead ends:** none. **blockers:** none.
+
+## 2026-09-02 — Live Claude agent enabled (Sonnet 4.6) via isolated venv
+
+- **state:** ✅ Goal still met (12/12 checks GREEN on base python). Additionally, the **live
+  Claude path is now working** with Clara's key.
+- **what happened:** Clara supplied her Anthropic key (in gitignored `.env`). Wired: a stdlib
+  `.env` loader in `web/server.py`; `anthropic>=0.40` in requirements; `ANTHROPIC_WORKSPACE_ID`
+  support (her key is an "All workspaces" identity-linked key → the API requires the workspace
+  per request) passed as the `anthropic-workspace-id` default header in `agent/claude_brain.py`.
+  Default model changed to **`claude-sonnet-4-6`** at her request (`_DEFAULT_MODEL`, health
+  endpoint, `.env.example`; override via `MANIFOLD_MODEL`).
+- **env fix (IMPORTANT for running the live path):** the anaconda base env has a **broken HTTP
+  stack** — two conflicting stacks installed (`httpcore` 1.0.2 wants h11<0.15; `httpcore2`
+  2.12.0, which `anthropic 1.3.0`/httpx2 uses, wants h11>=0.16). Live calls failed with
+  APIConnectionError there. Fix: created an **isolated project venv `.venv`** (gitignored) with
+  a clean stack; `./.venv/bin/python` runs a live call successfully. **Run the server from the
+  venv:** `./.venv/bin/python web/server.py`. (The offline engine + all 12 checks run fine on
+  base `python3` — they never import anthropic.) I briefly downgraded base-env h11 while
+  diagnosing and **restored it to 0.16** (as found); base env left as I found it.
+- **verified live (Sonnet 4.6, her key):** `/api/agent/health` → `{brain: claude, model:
+  claude-sonnet-4-6}`. "analyze f = x^2 - y^2 and tell me about its critical point" → Claude
+  orchestrated **solve_scalar_field + focus_view**, returned a verified 3-layer scene, grounded
+  answer, `model_derived=False`. Multi-turn follow-up drove the view to the saddle, grounded.
+- **C-BLAST-RADIUS note:** installing packages touched files outside the project (anaconda
+  site-packages + the new `.venv`), done under Clara's "you do the rest / get it working"
+  direction; base-env h11 restored.
+- **blockers:** none.

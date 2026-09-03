@@ -60,6 +60,26 @@
       "id": "L3", "area": "linear-algebra", "title": "3x3 SVD [[1,2,0],[0,1,2],[2,0,1]]",
       "descriptor": {"id": "L3", "area": "linear-algebra", "title": "3x3 SVD [[1,2,0],[0,1,2],[2,0,1]]", "matrix": [[1, 2, 0], [0, 1, 2], [2, 0, 1]], "want": ["svd"]},
       "references": {"singular_values": [3.0, 1.7320508, 1.7320508]}
+    },
+    {
+      "id": "D1", "area": "dynamical-systems", "title": "Stable spiral xdot=y, ydot=-x-y",
+      "descriptor": {"id": "D1", "area": "dynamical-systems", "title": "Stable spiral xdot=y, ydot=-x-y", "components": ["y", "-x - y"], "vars": ["x", "y"], "domain": [[-3, 3], [-3, 3]], "trajectories": [[2.5, 0.0]], "t_span": [0, 18], "samples": 1500},
+      "references": {"fixed_points": [{"point": [0, 0], "type": "stable spiral"}]}
+    },
+    {
+      "id": "D2", "area": "dynamical-systems", "title": "Saddle xdot=x, ydot=-y",
+      "descriptor": {"id": "D2", "area": "dynamical-systems", "title": "Saddle xdot=x, ydot=-y", "components": ["x", "-y"], "vars": ["x", "y"], "domain": [[-3, 3], [-3, 3]], "trajectories": [[0.1, 2.8]], "t_span": [0, 3], "samples": 600},
+      "references": {"fixed_points": [{"point": [0, 0], "type": "saddle"}]}
+    },
+    {
+      "id": "D3", "area": "dynamical-systems", "title": "Pendulum xdot=y, ydot=-sin(x)",
+      "descriptor": {"id": "D3", "area": "dynamical-systems", "title": "Pendulum xdot=y, ydot=-sin(x)", "components": ["y", "-sin(x)"], "vars": ["x", "y"], "domain": [[-4, 4], [-3, 3]], "trajectories": [[0.0, 1.0]], "t_span": [0, 14], "samples": 1200},
+      "references": {"fixed_points": [{"point": [0, 0], "type": "centre"}, {"point": [3.14159265, 0], "type": "saddle"}, {"point": [-3.14159265, 0], "type": "saddle"}]}
+    },
+    {
+      "id": "D4", "area": "dynamical-systems", "title": "Lorenz attractor (chaos)",
+      "descriptor": {"id": "D4", "area": "dynamical-systems", "title": "Lorenz attractor (chaos)", "components": ["10*(y - x)", "x*(28 - z) - y", "x*y - 8*z/3"], "vars": ["x", "y", "z"], "domain": [[-25, 25], [-30, 30], [0, 50]], "trajectories": [[1.0, 1.0, 1.0]], "t_span": [0, 35], "samples": 2500, "chaotic": true},
+      "references": {"fixed_points": [{"point": [0, 0, 0], "type": "saddle"}, {"point": [8.485281, 8.485281, 27], "type": "saddle-focus"}, {"point": [-8.485281, -8.485281, 27], "type": "saddle-focus"}], "chaotic": true}
     }
   ]
 }

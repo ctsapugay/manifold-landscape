@@ -17,7 +17,9 @@ verified quantities. Standard library only; no external dependencies.
 from __future__ import annotations
 
 import json
+import os
 import sys
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -25,9 +27,48 @@ from urllib.parse import urlparse, parse_qs
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+
+def _load_dotenv() -> None:
+    """Load KEY=VALUE lines from a local .env into the environment (without overwriting
+    anything already set). Stdlib only; .env is gitignored so no secret is tracked
+    (constraint C-SECRETS). This is how the agent picks up ANTHROPIC_API_KEY to run as the
+    live Claude tutor; with no key it falls back to the deterministic offline brain."""
+    env = ROOT / ".env"
+    if not env.exists():
+        return
+    for raw in env.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_dotenv()
+
 from web.problems import (  # noqa: E402
     CATALOG, CATALOG_BY_ID, solve_descriptor, answer_question,
 )
+from agent import build_agent  # noqa: E402
+from agent.agent import _claude_available  # noqa: E402
+
+# One stateful agent per browser session (local, single-user; kept in memory). A session's
+# agent remembers the current problem and — on the Claude path — the running conversation, so
+# follow-up questions and view moves are multi-turn (G6). The offline brain is used when no
+# API key is configured, so the app always works.
+_AGENTS: dict[str, object] = {}
+_AGENTS_LOCK = threading.Lock()
+
+
+def _agent_for(session: str):
+    with _AGENTS_LOCK:
+        agent = _AGENTS.get(session)
+        if agent is None:
+            agent = build_agent()
+            _AGENTS[session] = agent
+        return agent
 
 WEB = ROOT / "web"
 STATIC = {
@@ -63,9 +104,28 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._json(404, {"error": f"missing {name}"})
             return
+        if path.startswith("/vendor/"):
+            # locally-vendored assets (Three.js). Resolve inside web/ only — no traversal.
+            rel = path.lstrip("/")
+            f = (WEB / rel).resolve()
+            if WEB in f.parents and f.is_file():
+                ctype = ("application/javascript; charset=utf-8" if f.suffix == ".js"
+                         else "application/octet-stream")
+                self._send(200, f.read_bytes(), ctype)
+            else:
+                self._json(404, {"error": "not found"})
+            return
         if path == "/api/catalog":
             self._json(200, [{"id": d["id"], "area": d["area"], "title": d["title"]}
                              for d in CATALOG])
+            return
+        if path == "/api/agent/health":
+            claude = _claude_available()
+            self._json(200, {
+                "brain": "claude" if claude else "offline",
+                "claude_available": claude,
+                "model": os.environ.get("MANIFOLD_MODEL", "claude-sonnet-4-6") if claude else None,
+            })
             return
         if path == "/api/scene":
             qs = parse_qs(parsed.query)
@@ -94,6 +154,22 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, solve_descriptor(body))
             except Exception as exc:
                 self._json(400, {"error": f"{type(exc).__name__}: {exc}"})
+            return
+        if path == "/api/agent":
+            session = str(body.get("session") or "default")
+            text = (body.get("text") or "").strip()
+            if not text:
+                self._json(400, {"error": "need a non-empty 'text'"})
+                return
+            if body.get("reset"):
+                _agent_for(session).reset()
+            try:
+                result = _agent_for(session).run(text)
+                self._json(200, result.to_dict())
+            except Exception as exc:  # never surface a stack trace to the UI (G8)
+                self._json(200, {"answer": f"Something went wrong: {type(exc).__name__}.",
+                                 "declined": True, "scene": None, "trace": {},
+                                 "quantities": [], "directives": []})
             return
         if path == "/api/ask":
             desc = CATALOG_BY_ID.get(body.get("id")) or body.get("descriptor")
