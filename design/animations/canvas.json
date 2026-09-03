@@ -1,0 +1,14 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 720, "h": 560, "title": "Grow from centre", "is_interactive": true },
+    { "file": "EdgeWipe.dc.html", "x": 880, "y": 0, "w": 720, "h": 560, "title": "Draw from edge", "is_interactive": true },
+    { "file": "ContourBloom.dc.html", "x": 1760, "y": 0, "w": 720, "h": 560, "title": "Contours bloom", "is_interactive": true }
+  ],
+  "annotations": [
+    { "id": "how", "x": 0, "y": -150, "w": 760, "text": "DRAW-ON ANIMATIONS — a real surface (z = bump) as the shape\nEach loops: the shape DRAWS itself on (no fade), the vector field fades in behind the wavefront, then the camera eases OUT to the finished image. Timing is slowed down from the chaos speed. Same idea maps to any shape in the app — surfaces, the sphere→ellipsoid, phase portraits." },
+    { "id": "opt-a", "x": 0, "y": 592, "w": 700, "text": "A · GROW FROM CENTRE — the surface strokes on outward from its peak. Most 'blooming into existence'; reads as the shape emerging from its most important point." },
+    { "id": "opt-b", "x": 880, "y": 592, "w": 700, "text": "B · DRAW FROM EDGE — the outline is penned first, then the mesh fills across from the near edge. Most like a hand drawing it; clearest sense of a pen laying it down." },
+    { "id": "opt-c", "x": 1760, "y": 592, "w": 700, "text": "C · CONTOURS BLOOM — a faint surface, then level-set rings spread outward from the centre. Most 'topographic'; emphasises height/structure over the mesh." }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -48,27 +48,30 @@ function animate() {
     const s = 1 + 0.18 * Math.sin(performance.now() * 0.005);
     highlightMarker.scale.setScalar(s);
   }
-  // self-drawing curves: reveal each line progressively
-  if (drawAnim.length) {
-    const now2 = performance.now();
-    for (let i = drawAnim.length - 1; i >= 0; i--) {
-      const d = drawAnim[i];
-      const p = Math.min(1, (now2 - d.t0) / d.dur);
-      const eased = 1 - Math.pow(1 - p, 3);
-      d.line.geometry.setDrawRange(0, Math.max(2, Math.floor(eased * d.count)));
-      if (p >= 1) drawAnim.splice(i, 1);
-    }
+  const tnow = performance.now();
+  // shapes draw themselves on — geometry revealed progressively (curves and surfaces alike)
+  for (let i = drawAnim.length - 1; i >= 0; i--) {
+    const d = drawAnim[i];
+    const p = Math.min(1, (tnow - d.t0) / d.dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    d.geom.setDrawRange(0, p >= 1 ? d.count : Math.max(2, Math.floor(eased * d.count)));
+    if (p >= 1) drawAnim.splice(i, 1);
   }
-  // non-curve layers fade in on reveal (so surfaces/arrows/points don't pop)
-  if (fades.length) {
-    const now3 = performance.now();
-    for (let i = fades.length - 1; i >= 0; i--) {
-      const f = fades[i];
-      const p = Math.min(1, (now3 - f.t0) / f.dur);
-      const e = p * p * (3 - 2 * p);
-      for (const m of f.ents) m.m.opacity = m.o0 * e;
-      if (p >= 1) { for (const m of f.ents) { m.m.opacity = m.o0; m.m.transparent = m.tr; } fades.splice(i, 1); }
-    }
+  // point markers grow in from nothing
+  for (let i = growAnim.length - 1; i >= 0; i--) {
+    const g = growAnim[i];
+    const p = Math.min(1, (tnow - g.t0) / g.dur);
+    const e = 1 - Math.pow(1 - p, 3);
+    for (const m of g.meshes) m.mesh.scale.setScalar(Math.max(0.001, e) * m.base);
+    if (p >= 1) { for (const m of g.meshes) m.mesh.scale.setScalar(m.base); growAnim.splice(i, 1); }
+  }
+  // the vector field / scalar grids fade in behind the drawing wavefront
+  for (let i = fades.length - 1; i >= 0; i--) {
+    const f = fades[i];
+    const p = Math.min(1, (tnow - f.t0) / f.dur);
+    const e = p * p * (3 - 2 * p);
+    for (const m of f.ents) m.m.opacity = m.o0 * e;
+    if (p >= 1) { for (const m of f.ents) { m.m.opacity = m.o0; m.m.transparent = m.tr; } fades.splice(i, 1); }
   }
   controls.update();
   renderer.render(scene, camera);
@@ -93,11 +96,14 @@ let currentId = null;
 let _frames = 0, _fps = 0, _lastFpsT = performance.now();
 let sceneData = null;
 let fieldHidden = false;               // vector-field toggle state
-let drawLines = [];                    // {line, count, step} — curves that draw themselves in
-let drawAnim = [];                     // {line, count, t0, dur} — currently animating
-let fades = [];                        // {ents, t0, dur} — non-curve layers fading in on reveal
-const DRAW_DUR = 1600;
-const FADE_DUR = 550;
+// how a layer ENTERS: shapes (surfaces, curves) DRAW themselves on; point markers GROW from
+// nothing; the vector field and scalar grids FADE in behind the drawing. Slow and deliberate.
+let drawAnim = [];                     // {geom, count, t0, dur} — geometry revealed by drawRange
+let growAnim = [];                     // {meshes:[{mesh,base}], t0, dur} — point markers scaling in
+let fades = [];                        // {ents, t0, dur} — field/grid layers fading in
+const DRAW_DUR = 2600;
+const FADE_DUR = 850;
+const GROW_DUR = 620;
 
 // tutor-driven view: an eased focus target + a pulsing highlight marker (criterion G5)
 let focusTarget = null;      // THREE.Vector3 the controls ease toward
@@ -284,7 +290,7 @@ const FIELD_IDS = new Set(["vector_field", "flow_field", "gradient_field"]);
 function buildScene(data) {
   sceneData = data;
   clearContent();
-  drawLines = []; drawAnim = [];
+  drawAnim = []; growAnim = []; fades = [];
   zScale = computeZScale(data);
   // reference axes at the origin
   const axes = new THREE.AxesHelper(3.2);
@@ -297,21 +303,10 @@ function buildScene(data) {
     obj.userData.isField = layer.type === "vectors" && FIELD_IDS.has(layer.id);
     contentGroup.add(obj);
     layerObjects.push({ object: obj, step: layer.step, type: layer.type, wasVisible: false });
-    // collect self-drawing curves (trajectories, image ellipses, descent paths); each is
-    // drawn in the moment its layer is first revealed, so a walkthrough draws piece by piece
-    if (layer.type === "polyline" || layer.type === "curve") {
-      obj.traverse((o) => {
-        if (o.isLine && o.geometry.getAttribute("position")) {
-          o.userData.wasVisible = false;
-          o.geometry.setDrawRange(0, 2);
-          drawLines.push({ line: o, count: o.geometry.getAttribute("position").count, step: layer.step });
-        }
-      });
-    }
   }
   steps = data.steps || [];
   maxStep = layerObjects.reduce((m, l) => Math.max(m, l.step), 0);
-  setStep(maxStep); // reveals every layer and triggers each curve's draw-in
+  setStep(maxStep); // reveals every layer and triggers its entrance animation
   frameScene(false); // snap to a good first framing, then let steps ease from here
 }
 
@@ -328,17 +323,38 @@ function fadeIn(obj) {
   fades.push({ ents, t0: performance.now(), dur: FADE_DUR });
 }
 
-// draw one curve in from scratch
-function triggerDraw(line, count) {
-  for (let i = drawAnim.length - 1; i >= 0; i--) if (drawAnim[i].line === line) drawAnim.splice(i, 1);
-  line.geometry.setDrawRange(0, 2);
-  drawAnim.push({ line, count, t0: performance.now(), dur: DRAW_DUR });
+// A shape (surface, mesh, curve) draws itself on: reveal its geometry progressively via
+// drawRange — the same mechanism whether it's a line's vertices or a surface's triangles.
+function triggerDraw(object) {
+  const geoms = new Set();
+  object.traverse((o) => { if ((o.isLine || o.isMesh) && o.geometry) geoms.add(o.geometry); });
+  for (const geom of geoms) {
+    const count = geom.index ? geom.index.count : ((geom.getAttribute("position") || {}).count || 0);
+    if (!count) continue;
+    for (let i = drawAnim.length - 1; i >= 0; i--) if (drawAnim[i].geom === geom) drawAnim.splice(i, 1);
+    geom.setDrawRange(0, 2);
+    drawAnim.push({ geom, count, t0: performance.now(), dur: DRAW_DUR });
+  }
 }
 
-// replay: forget what has entered, so re-revealing draws curves and fades layers in again
+// Point markers grow in from nothing — a shape appearing from a single point.
+function triggerGrow(object) {
+  const meshes = [];
+  object.traverse((o) => { if (o.isMesh) { meshes.push({ mesh: o, base: o.scale.x || 1 }); o.scale.setScalar(0.001); } });
+  if (meshes.length) growAnim.push({ meshes, t0: performance.now(), dur: GROW_DUR });
+}
+
+// Dispatch a layer's entrance by kind when it is first revealed.
+function revealAnim(l) {
+  const t = l.type;
+  if (t === "surface" || t === "param_surface" || t === "polyline" || t === "curve") triggerDraw(l.object);
+  else if (t === "points") triggerGrow(l.object);
+  else fadeIn(l.object); // vectors (the field), scalar_grid, eigenvectors
+}
+
+// replay: forget what has entered, so re-revealing re-draws / re-grows / re-fades everything
 function startDrawIn() {
-  drawAnim = []; fades = [];
-  for (const d of drawLines) { d.line.userData.wasVisible = false; d.line.geometry.setDrawRange(0, 2); }
+  drawAnim = []; growAnim = []; fades = [];
   for (const l of layerObjects) l.wasVisible = false;
 }
 
@@ -385,15 +401,9 @@ function setStep(k) {
     let vis = l.step <= currentStep;
     if (fieldHidden && l.object.userData.isField) vis = false;
     l.object.visible = vis;
-    // non-curve layers fade in on first reveal (curves draw in instead, below)
-    if (vis && !l.wasVisible && l.type !== "polyline" && l.type !== "curve") fadeIn(l.object);
+    // each layer plays its entrance the moment it is first revealed
+    if (vis && !l.wasVisible) revealAnim(l);
     l.wasVisible = vis;
-  }
-  // a curve draws itself in the moment its layer is first revealed
-  for (const d of drawLines) {
-    const now = d.step <= currentStep;
-    if (now && !d.line.userData.wasVisible) triggerDraw(d.line, d.count);
-    d.line.userData.wasVisible = now;
   }
 }
 
@@ -442,6 +452,8 @@ function clearHighlight() {
   focusTarget = null; focusCamPos = null;
 }
 window.__ml.focusOn = focusOn;
+// debug: how many entrance animations are in flight (0 once everything has finished drawing)
+window.__ml.drawing = () => ({ draw: drawAnim.length, grow: growAnim.length, fade: fades.length });
 
 // ---------------------------------------------------------------- UI ----------
 const $ = (id) => document.getElementById(id);
@@ -543,6 +555,12 @@ function newProblem(r) {
     beats.push({ label: s.introduces, text: s.description || layerLabel(s.step) || s.introduces,
                  focus: { step: s.step }, revealStep: s.step,
                  verified: !!s.description, model_derived: false });
+  }
+  // end the walkthrough by zooming back out to the whole finished picture
+  if ((r.walkthrough || []).length) {
+    beats.push({ label: "The full picture", focus: "fit", revealStep: maxStep,
+                 text: "Every feature together — rotate, zoom, and explore the finished visual.",
+                 verified: false, model_derived: false });
   }
   beatIdx = 0;
   tutorCard.hidden = false;

@@ -691,3 +691,28 @@ reader: state, not narrative.
   canvas.json, manifold-redesign.html) live in the repo root, untracked.
 - **next:** await Clara — offer to commit + push the redesign (and decide whether the .dc.html
   design working files belong in the repo / a subfolder).
+
+## 2026-09-02 — Animation & explanation polish (root-cause, whole suite)
+
+- **state:** ✅ Goal met; app is smooth/clean/intuitive across all five areas. verify.py GREEN
+  (CHK-001…012), 49 tests pass. Pushed (commit 5516e6e).
+- **root-cause fixes (general, not test-targeted):**
+  - `web/app.js`: (1) curves draw in when their layer is REVEALED (reveal-triggered via
+    setStep), so walkthroughs draw each new piece; (2) every non-curve layer fades in on
+    reveal (fadeIn + fades loop) — surfaces/arrows/points no longer pop; (3) camera framing is
+    one eased `frameScene()` (replaces snapping fitCamera) so every step/overview glides;
+    focusStep flies to each step's geometry; (4) Replay re-runs the whole entrance.
+  - `web/problems.py`: `_narrate(sol)` attaches a grounded per-step `description` from the
+    shared verified Explainer to every walkthrough step, uniformly across all areas → the
+    tutor card reads as intuitive prose, not bare labels. Frontend uses `s.description`.
+- **verified:** programmatic sweep of all 16 catalog problems — every scene well-formed
+  (base layer + steps), 100% of steps narrated, all quantities verified, no crashes.
+  Browser-checked live: ripples surface, [[2,1],[1,2]], pendulum (stepped: equilibria →
+  stability → trajectories, camera eased, grounded prose), Rosenbrock valley, Lorenz draw-in.
+  bench ~0.67 ms/frame.
+- **notes:** offline server (base python, `ANTHROPIC_API_KEY=""`) used for fast/free visual
+  testing; live app restarted from venv. Design/backend narration adds no check-relevant risk
+  (checks validate layers, not the steps list). A parsed ODE uses default domain [-3,3] so a
+  pendulum typed without a domain shows only the origin equilibrium (±π lie outside) — correct
+  for the domain, not an animation issue.
+- **next:** await Clara. Nothing blocked.

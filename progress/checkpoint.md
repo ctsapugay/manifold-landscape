@@ -35,11 +35,13 @@ long, degraded one. This is **progress, not governed content**.
   needs), so the live path must use the isolated **`.venv`** (gitignored, clean stack). The
   offline engine + all 12 checks run fine on base `python3` (they never import anthropic) — keep
   running `python3 tools/verify.py` for checks.
-- **UI redesigned (2026-09-02, post-completion, Clara-directed):** web/ rebuilt to the approved
-  refined-dark "floating tutor" look — immersive 3-D stage, self-drawing curves, tutor card that
-  flies the camera to each step, Replay, vector-field toggle, plain-prose Claude answers. Browser-
-  verified live on Sonnet 4.6; all 12 checks green. Design canvas source: `manifold-redesign.html`
-  (published artifact) + `Main/Annotations/SideRail.dc.html` + `canvas.json` (untracked, repo root).
+- **UI redesigned + polished (2026-09-02, post-completion, Clara-directed):** web/ rebuilt to the
+  refined-dark "floating tutor" look, then a root-cause animation/explanation pass: reveal-triggered
+  curve draw-in, fade-in for non-curve layers, one eased `frameScene()` (no camera snapping),
+  focusStep camera flights, Replay re-runs the entrance, and grounded per-step narration from the
+  shared Explainer (`_narrate` in web/problems.py, 100% coverage across all 16 catalog problems).
+  Browser-verified live on Sonnet 4.6 across all five areas; 49 tests + CHK-001…012 green. Pushed
+  (5516e6e). Design canvas source in `design/` + published artifact `manifold-redesign.html` (gitignored).
 - **open item (not a gate failure):** the redesign + earlier criteria/goal `met` edits are
   **uncommitted** (criteria/goal state+evidence are excluded from the governed digest, so no
   drift). Awaiting Clara's go-ahead to commit + push (harness: commit only when asked). Run the
