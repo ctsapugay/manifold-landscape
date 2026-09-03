@@ -57,25 +57,38 @@ plus an interactive 3D visual you can manipulate; the step-by-step walkthrough i
 when the user asks for it, it TUTORS, building the visual in sync and driving it to point at
 what matters, and it answers questions at any step, grounded in the computed state.
 
-IMPORTANT — the core is BUILT and WORKING, not a greenfield build. On main and passing:
-the deterministic engine for all five areas (engine/), the interactive 3D web app (web/),
-the tool-orchestrating AI agent (agent/, live Claude path + offline fallback), multi-turn
-grounded chat, the transparency toggle and thinking indicator, and the draw-on animation
-system — shapes DRAW/GROW themselves on (surfaces grow from the centre by default, with a
-top-bar toggle that blooms level-set CONTOURS from the centre and back), the vector field
-fades in, and a walkthrough ends framed on the whole picture. All ten criteria (G1–G10) are
-MET with evidence and python3 tools/verify.py is GREEN (CHK-001…013); the goal condition is
-`met`. When you hit a math gap the tools can't close, BUILD a deterministic tool for it (or
-generate + execute + verify code) rather than letting the model compute the answer — model
-math is a last resort and must be labelled model-derived (C-VERIFIED-MATH). The agent calls
-the Anthropic (Claude) API — key lives in .env (gitignored; never commit it); the LIVE path
-runs from the isolated venv (./.venv/bin/python web/server.py), the offline engine + all
-checks run on base python3. Continued development is Clara-directed — she hands you the next
-goal. See goals/ for the finish line and progress/checkpoint.md for exactly where things stand.
+IMPORTANT — the core is BUILT and WORKING; your job is PHASE 2, making the tutoring genuinely
+pedagogical. Phase 1 (on main, all MET): the deterministic engine for all five areas
+(engine/), the interactive 3D web app (web/), the tool-orchestrating AI agent (agent/, live
+Claude + offline fallback), multi-turn grounded chat, the transparency toggle + thinking
+indicator, and the draw-on animation system (shapes draw/grow on; surfaces grow from the
+centre with a toggle that blooms level-set CONTOURS and back). Criteria G1–G10 are met and
+python3 tools/verify.py is GREEN (CHK-001…013).
+
+PHASE 2 is the open part of the goal (criteria G11–G15, UNMET). It came from Clara reviewing
+the tutor on a multi-part Lorenz problem and finding it not good enough at TEACHING. The
+OUTCOMES still to reach — the finished tutor must: teach a complex problem in small,
+bite-sized, single-idea steps that show multi-stage calculations stage by stage with the
+matching visual, at a pace a first-time learner can follow; give clearly formatted, readable
+explanations (not walls of text, math shown as notation); let the user ask follow-up questions
+about an individual step; give the user their chat history through a control that doesn't crowd
+the visual; and hold this quality across the WHOLE test set — every case on point on answer,
+explanation, visual, and animation, judged by driving all cases, not spot-checks.
+
+HOW you achieve these is YOURS to decide inside the constraints — the goal and the constraints
+say what must be true, not how to build it. goals/criteria.md is the authoritative finish line
+(each criterion names the check that backs it), and progress/checkpoint.md carries the current
+state and useful pointers; python3 tools/brief.py --goal prints live status. Do NOT weaken
+anything already met (G1–G10). Math stays tool-computed + verified or labelled model-derived
+(C-VERIFIED-MATH); when a tool gap appears, prefer building a tool over letting the model
+compute. Operational: the Anthropic key is in .env (never commit it); run the LIVE app from the
+venv (./.venv/bin/python web/server.py) and the offline engine + checks on base python3; you may
+add constraints/checks freely (appends are auto-approved) but editing or removing an existing
+one needs Clara; keep python3 tools/verify.py green as you go.
 
 When you have done all four steps, briefly confirm you understand the system and the
 project, and report the current checkpoint and any open blockers. Then wait — I will seed
-goal mode with the next goal (via /goal). Do not start work until then.
+goal mode with the Phase-2 goal (via /goal). Do not start work until then.
 ```
 
 ## Step 2 — seed goal mode
@@ -85,69 +98,45 @@ block below to hand it the finish line. It then works toward the goal condition 
 constraints, following the persistence / blocker / checkpoint protocol in `CLAUDE.md`.
 
 ```
-Enter goal mode on the Manifold Landscape project. Work toward the finish line below, inside
-the constraints, using your own judgment on everything the constraints don't fix. This
-finish line is governed — not yours to change; if something is wrong, propose it
-(commands/propose.md), don't edit it.
+Enter goal mode on Manifold Landscape. Work toward the finish line below, inside the
+constraints in constraints/, using your own judgment on HOW to get there. The constraints and
+this goal say what must be TRUE, never how to build it — you decide the work. This finish line
+is GOVERNED: not yours to change (propose via commands/propose.md, don't edit).
 
-GOAL: Manifold Landscape is a locally-run, AI-tutored tool for building intuition in the
-geometry of continuous mathematics across five areas — scalar fields & surfaces, gradients &
-optimization landscapes, vector fields, linear algebra as geometry, and dynamical systems
-(ODEs). A user poses a problem however they like (equation, word problem, or open conceptual
-request); an AI agent interprets it and orchestrates deterministic tools to solve it, so
-every displayed result is tool-computed and verified or clearly labelled model-derived
-(C-VERIFIED-MATH; the model computing math itself is a last resort — close gaps by building
-tools). By default it presents the answer as an interactive 3D visualization the user can
-manipulate; when the user asks, it tutors — an optional step-by-step walkthrough that builds
-the visualization in sync, drives it to point at what matters, and answers follow-up
-questions at any step, grounded in the computed state. The agent's tool use is inspectable,
-and the visualization stays responsive while it thinks. Built to a portfolio standard that
-shows off mathematical depth and agentic-AI craft.
+THE PRODUCT — a locally-run, AI-tutored tool for building intuition in the geometry of
+continuous mathematics across five areas: scalar fields & surfaces, gradients & optimization,
+vector fields, linear algebra as geometry, and dynamical systems (ODEs). What must be true of
+it:
+- A user can pose a problem however they like — an equation, a word problem, or an open
+  request like "show me an example of chaos".
+- An AI agent interprets the request and orchestrates deterministic tools to solve it, so every
+  result the user sees is tool-computed and independently verified, or else clearly labelled as
+  model-derived (the model doing the math itself is a last resort).
+- By default it answers with an interactive 3D visualization the user can rotate, zoom, and pan
+  smoothly; shapes appear by being drawn on, not by popping in.
+- On request it TUTORS: a genuinely pedagogical walkthrough that breaks a complex problem into
+  small, bite-sized, single-idea steps, shows multi-stage calculations stage by stage with the
+  matching visual, is clearly formatted and readable, and is paced so a first-time learner can
+  follow it.
+- The user can ask follow-up questions about any individual step, answered from that step's
+  verified state, and can bring up their chat history through a clean control that never crowds
+  the visualization.
+- The agent's tool use is inspectable, and the visualization stays responsive while it thinks.
+- This quality holds across the WHOLE test set: every case is on point on every dimension the
+  user experiences — the answer, the explanation, the visualization, and the animation — judged
+  by driving all the cases, not by spot-checking a few.
+It is built to a portfolio standard that shows mathematical depth and agentic-AI craft.
 
-DONE only when every criterion is met with real evidence AND python3 tools/verify.py is
-green AND every constraint held throughout. The authoritative criteria are in
-goals/criteria.md (python3 tools/brief.py --goal prints them live). In brief:
-  G1  Trustworthy math — every displayed result is tool-computed + verified, or clearly
-      labelled model-derived; nothing unverified is shown as verified; model math is a last
-      resort (close gaps by building tools), not routine.
-  G2  Broad coverage — solves ≥90% of a large held-out test set across all five areas and
-      all input styles (equation / word problem / conceptual), 100% of the protected core;
-      out-of-scope requests mapped or honestly declined.
-  G3  Agentic solving — an AI agent interprets input and orchestrates the tools (not a fixed
-      pipeline); math is done by tools (or, only where none applies, by the agent per G1).
-  G4  Answer + interactive 3D by DEFAULT (rotate/zoom/pan smooth, nothing forced); the
-      step-through is an OPTIONAL opt-in walkthrough that builds the scene in sync, each step
-      showing exactly its geometry.
-  G5  The tutor drives the visualization — during the walkthrough or on a question, it
-      focuses/highlights/transforms the relevant feature when it aids understanding.
-  G6  Grounded multi-turn chat at any step — answers agree with the computed state, claims
-      trace to a computed result or are labelled model-derived.
-  G7  Transparent & responsive — a toggle shows the agent's tool-calls; a thinking indicator
-      shows during agent work; the 3D stays smooth while it thinks.
-  G8  Polished, unbroken end-to-end flow across the test set (pose → interpret → solve →
-      visualize → step → chat).
-  G9  Scope + future expansions documented (five areas; deferred PDEs, physics, 4D+).
-  G10 Shapes are DRAWN ON — each shape builds up progressively (not a pop or whole-fade),
-      the field fades in, a walkthrough ends framed on the whole picture; a surface grows
-      from its CENTRE by default and the user can switch it to a CONTOUR bloom and back.
+DONE only when every criterion in goals/criteria.md is met with real evidence, AND
+`python3 tools/verify.py` is green, AND every constraint in constraints/ held throughout. Those
+files — not this paragraph — are the authoritative finish line; `python3 tools/brief.py --goal`
+prints them live and shows which outcomes already hold and which remain. Within the
+constraints, you have full freedom to decide what work achieves them.
 
-On main and complete: engine/ (deterministic tools for all five areas), web/ (the
-interactive 3D app + draw-on animation system), agent/ (the tool-orchestrating agent, live
-Claude path + offline fallback), tests/, and CHK-001…013 — all green, goal `met`. This goal
-is DONE; a fresh session is for the NEXT goal Clara defines, or for maintenance that keeps
-G1–G10 true and verify.py green. When a math gap can't be closed by an existing tool, BUILD
-one (or generate + execute + verify code) rather than letting the model compute the answer —
-model math is a last resort, always labelled model-derived. The Anthropic API key lives in
-.env (never commit it — C-SECRETS); run the LIVE app from the venv (./.venv/bin/python
-web/server.py), run checks on base python3. Register new checks as you build (appends are
-auto-approved per Clara's standing policy; editing/removing an existing check or constraint
-needs her sign-off). Test-set rule: you may ADD problems freely, but removing/weakening a
-protected-core problem needs Clara's approval.
-
-Start from progress/checkpoint.md's "next". Re-ground with python3 tools/brief.py as you go.
-Keep working across unblocked fronts; stop only when blocked on all fronts or when a decision
-is genuinely dangerous. Log at breaks; keep the checkpoint current. Stop when the criteria
-are met and verify.py is green — then say so, don't work past the finish line.
+Re-ground with `python3 tools/brief.py` as you go; work across unblocked fronts, stopping only
+when fully blocked or a decision is genuinely dangerous or irreversible; log at natural breaks
+and keep progress/checkpoint.md current. Stop when the criteria are met and verify.py is green —
+then say so, and don't work past the finish line.
 ```
 
 > This box mirrors the **governed** goal condition (`goals/goal-condition.md`) and criteria

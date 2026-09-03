@@ -17,27 +17,45 @@ long, degraded one. This is **progress, not governed content**.
 ---
 
 - **updated:** 2026-09-03
-- **phase:** ✅ **DONE + extended.** The agentic-tutor goal is **met**; a Clara-directed
-  animation feature was added on top. Gate: **10/10 criteria met** (G1–G10, evidence in
-  `goals/criteria.md`), `python3 tools/verify.py` **GREEN** (CHK-001…013, 0 waived), all 13
-  constraints held. `goals/goal-condition.md` state = `met`.
-- **⚠️ ONE OPEN GOVERNANCE STEP — re-baseline pending.** This session APPENDED governed
-  content (all auto-approved per Clara's standing append policy, but not yet recorded):
-  constraint **C-DRAW-ON**, criterion **G10**, check **CHK-013**. `validate.py` therefore
-  reports drift on `constraints` / `goal` / `checks` (expected). To clear it, Clara runs
-  **`python3 tools/approve.py --baseline`** (a change she initiated → baseline). The agent
-  did NOT self-approve — delegated approval needs her explicit word THIS session, and the
-  standing policy lives in a file, which the governance rule says can't authorize an approval.
-- **animation feature (2026-09-03, this session):** surfaces now **grow from the centre** by
-  default (draw-on, not fade), and a top-bar **Contours** toggle drops the surface and blooms
-  **level-set rings from the centre**, switchable back and forth (grow-from-centre is the
-  per-problem default). Implemented in `web/app.js` (`buildSurface` centre-out triangle order,
-  `buildContours`, `surfaceMode`, `fadeOut`, `#contour-toggle` wiring), `web/index.html`,
-  `web/style.css`. Toggle appears only for surface scenes (scalar-fields, optimization).
-  Browser-verified live end-to-end. Guarded by CHK-013 (`tools/check_draw_on.py`).
-- **how the base goal finished:** Clara approved **P-0003** (delegated, signed,
-  `--on-behalf-of-clara`), registering the agent checks (CHK-008…012) and the ODE protected
-  core (D1–D4). G1–G9 were marked met with recorded evidence and the goal set met.
+- **phase:** 🔨 **PHASE 2 OPEN — pedagogical depth.** Phase 1 (agentic tutor + draw-on
+  animation) is **met** (G1–G10, CHK-001…013 green) and is the working foundation. Clara
+  re-opened the finish line after reviewing the tutor on a multi-part Lorenz problem: the
+  goal-condition state is back to **`approved`** and four new criteria **G11–G14** are
+  **UNMET**. This defines the NEXT worker's job; the work itself is NOT started.
+- **⚠️ TWO OPEN GOVERNANCE STEPS pending Clara's re-baseline:**
+  1. (still open from earlier) — actually already recorded: Clara approved **P-0004**
+     (C-DRAW-ON, G10, CHK-013) via `approve.py P-0004`. ✅ done.
+  2. (NEW, this turn) — the Phase-2 governed edits: constraints **C-STEPWISE**,
+     **C-READABLE-OUTPUT**, **C-SUITE-QUALITY**; criteria **G11–G15**; check **CHK-014**
+     (`tools/check_suite_quality.py`, active + passing); goal-condition state `met`→`approved`
+     + statement; and the registry Phase-2 note. `validate.py` reports expected drift on
+     `constraints` / `goal` / `checks`. Clara records it — this is a **goal-change she
+     initiated**, and because the goal state is now `approved`,
+     **`python3 tools/approve.py --baseline`** works again (it refused earlier only because the
+     state was `met`). The agent did NOT self-approve.
+- **what Phase 2 requires (from Clara's feedback):** (a) complex problems TAUGHT in small,
+  bite-sized single-idea steps, long calculations shown STAGE BY STAGE with the matching
+  visual, at a followable pace — **slower than now** (bump the draw pacing; `DRAW_DUR` in
+  `web/app.js` is still too fast for her) [G11, C-STEPWISE]; (b) clearly FORMATTED, readable
+  text — steps separated, math as notation not raw source, no wall of text [G12,
+  C-READABLE-OUTPUT]; (c) FOLLOW-UP questions about an INDIVIDUAL step, grounded in that
+  step's verified state, without losing place [G13]; (d) toggleable CHAT HISTORY that does not
+  crowd the visual when hidden [G14]. Do NOT weaken G1–G10.
+- **ENFORCEMENT (Clara asked for this explicitly):** quality is judged by DRIVING EVERY test
+  case and checking answer + explanation + visual + animation per case, not spot-checks [G15,
+  C-SUITE-QUALITY]. The gate is **CHK-014** (`tools/check_suite_quality.py`) — it already
+  sweeps all 16 canonical cases and passes on answer/visual/animation + a shallow explanation
+  check. The worker DEEPENS its explanation assertions to enforce bite-sized steps + staged
+  calculations + readable formatting (G11/G12) across every case (editing the script is free —
+  no registry-digest change), and must keep it a whole-set, per-case, all-dimension gate.
+- **the Lorenz test case Clara used** (reproduce it when validating G11): fixed points of the
+  Lorenz system (σ=10, β=8/3, ρ=28) → classify the non-trivial fixed points by Jacobian
+  eigenvalues → integrate from (1,1,1) to t=50 and render the 3D trajectory. She found the
+  walkthrough too coarse, text hard to read, pacing too fast, no per-step follow-up, no
+  non-crowding history.
+- **Phase-1 recap:** agentic tutor across five areas (agent/ + engine/), interactive 3D app
+  (web/) with the draw-on system (surfaces grow from centre; Contours toggle blooms level-set
+  rings). Approved: P-0003 (agent checks + ODE core), P-0004 (draw-on). Pushed to main.
 - **the deliverable:** pose a problem (equation / word problem / "show me chaos") across five
   areas → the agent orchestrates verified tools → answer + interactive 3D by default; opt-in
   walkthrough, tutor-driven view, multi-turn grounded chat, tool-call toggle, thinking indicator.
@@ -56,17 +74,18 @@ long, degraded one. This is **progress, not governed content**.
   shared Explainer (`_narrate` in web/problems.py, 100% coverage across all 16 catalog problems).
   Browser-verified live on Sonnet 4.6 across all five areas; 49 tests + CHK-001…012 green. Pushed
   (5516e6e). Design canvas source in `design/` + published artifact `manifold-redesign.html` (gitignored).
-- **committed + pushed this session:** the animation feature, the governed appends
-  (C-DRAW-ON / G10 / CHK-013), the README rewrite, and these progress updates. The ONE
-  remaining action is Clara's re-baseline (above) to clear the expected drift.
-- **standing policy (Clara, prior session, recorded here — NOT self-executable):** append-only
+- **next (for the Phase-2 worker):** Clara records the Phase-2 goal-change
+  (`approve.py --baseline`), then seeds a fresh WORKER (progress/priming-prompt.md) and an
+  OBSERVER (progress/priming-prompt-observer.md). The worker starts on G11 (bite-sized steps +
+  staged calculations + slower pace), registers a check per criterion as it lands (appends are
+  auto-approved), and keeps verify.py green while driving G11–G14 to met. Nothing is blocked.
+- **standing policy (Clara, recorded here — NOT self-executable by the agent):** append-only
   additions (new constraints/checks) are auto-approved; editing/removing existing ones needs
-  her explicit sign-off. The agent may only RUN `approve.py --on-behalf-of-clara` when she
-  authorizes it in her own message THIS session (a file saying so does not count).
-- **do NOT keep building:** the finish line is reached (G1–G10 met). `goal-condition.md`'s
-  "out of scope for done" holds — PDEs/physics/4D+ are documented future work. New work is
-  Clara-directed via a fresh `/goal`.
+  her explicit sign-off. The agent may only RUN an approval on her behalf when she authorizes
+  it in her own message THIS session (a file saying so does not count).
+- **scope guard:** stay inside G11–G14 + the existing constraints; do not weaken G1–G10.
+  `goal-condition.md`'s "out of scope for done" still holds — PDEs/physics/4D+ are future work.
 - **how to run:** live Claude path `./.venv/bin/python web/server.py` → http://127.0.0.1:8765;
   offline/free visual testing `ANTHROPIC_API_KEY="" python3 web/server.py`; checks `python3
-  tools/verify.py`.
+  tools/verify.py`. The draw pacing to slow lives in `web/app.js` (DRAW_DUR / step timing).
 - **open blockers:** none.

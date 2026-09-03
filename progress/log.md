@@ -800,3 +800,86 @@ reader: state, not narrative.
 - **proposals:** none.
 - **dead ends:** first placed #contour-toggle bottom-left (stacked above #field-toggle at
   bottom:82px) — it collided with the tutor card; moved it into the topbar.
+
+## 2026-09-03 — Phase 2 opened: pedagogical depth (goal re-opened; constraints + criteria added)
+
+- **state:** Goal-condition re-opened by Clara — state `met` → **`approved`**. Phase 1
+  (G1–G10, agentic tutor + draw-on) stays met and is the working foundation; four new criteria
+  **G11–G14** are UNMET and define Phase 2. No Phase-2 code written yet — Clara will seed a
+  fresh worker + observer to do the work. `validate.py` reports expected drift on
+  `constraints` / `goal`; Clara records it with `python3 tools/approve.py --baseline` (works
+  now that state is `approved`; it refused earlier only because state was `met`).
+- **why (Clara's feedback, verbatim intent):** she tested the tutor on a multi-part Lorenz
+  problem (find fixed points → classify non-trivial fixed points by Jacobian eigenvalues →
+  integrate from (1,1,1) to t=50 and render the 3D trajectory) and was not satisfied: the
+  agent needs to WALK someone through complex problems so they understand; text output must be
+  well formatted and easy to understand; big steps broken into BITE-SIZED steps; long
+  calculations shown STEP BY STEP with appropriate visuals; the animation is STILL TOO FAST;
+  there is NO way to ask follow-up questions about an individual step (there must be); and the
+  user needs their CHAT HISTORY available in a way that doesn't block/crowd the visual —
+  toggleable show/hide, clean.
+- **done (constraint-system only — this is finish-line definition, not implementation):**
+  - Constraints (appends, constraints/project.md): **C-STEPWISE** (small single-idea steps,
+    calculations shown stage by stage with matching visuals, followable pace) and
+    **C-READABLE-OUTPUT** (steps separated, math as notation not raw source, no wall of text).
+  - Criteria (goals/criteria.md, all `unmet`): **G11** taught in small steps + staged
+    calculations + comfortable pace (covers C-STEPWISE); **G12** clearly formatted/readable
+    (covers C-READABLE-OUTPUT); **G13** per-step follow-up questions grounded in that step's
+    verified state; **G14** toggleable chat history that doesn't crowd the visual.
+  - goal-condition.md: state `met`→`approved`, Status rewritten (Phase 1 met / Phase 2 open,
+    history preserved), Statement given a pedagogy sentence.
+  - checks/registry.md: a Phase-2 guidance comment listing the checks the worker will register
+    (CHK-014+ for G11–G14). No new CHK entries yet — the worker adds them as each lands.
+  - Priming prompts (worker + observer) + checkpoint refreshed for Phase 2.
+- **next:** Clara runs `approve.py --baseline` to record the goal-change, then seeds a worker
+  (progress/priming-prompt.md) and observer (progress/priming-prompt-observer.md). Worker
+  starts on G11.
+- **decisions:** (1) Encoded the durable quality bars (stepwise clarity, readable formatting)
+  as standing CONSTRAINTS, and the phase's measurable outcomes (incl. per-step follow-up and
+  chat-history toggle) as CRITERIA — constraints hold forever, criteria are this phase's gate.
+  (2) Folded "slow the animation down" into G11's pacing outcome rather than a separate
+  criterion (kept the criteria count at 14). (3) Re-opened the goal (state→approved) rather
+  than writing a brand-new goal, since the broad Statement still holds and this is a refinement
+  of the tutoring quality. (4) Left checks to the worker (nothing to test until built) — added
+  passing checks would be dishonest; the registry note guides them.
+- **approvals:** P-0004 (C-DRAW-ON / G10 / CHK-013) was approved by Clara this session via
+  `approve.py P-0004` (her own hand). The Phase-2 goal-change above awaits her `--baseline`.
+- **proposals:** P-0004 approved. No new proposal for Phase 2 — a goal-change she initiated is
+  recorded via `--baseline`, not a proposal (CLAUDE.md Situation 3).
+- **dead ends:** none.
+
+## 2026-09-03 — Phase 2 enforcement strengthened (whole-suite, per-case, all-dimension gate)
+
+- **why:** Clara pushed back on the first Phase-2 draft: the checks/constraints must "involve
+  driving ALL the test cases and checking whether the output (answer, explanation, visual,
+  animations) are all on point" — my initial G11–G14 only spot-checked "representative"
+  problems. She was right; spot-checks are exactly the failure this repo exists to prevent.
+- **done (constraint-system):**
+  - Constraint **C-SUITE-QUALITY** (constraints/project.md): completion is judged by driving
+    EVERY test case and checking all four output dimensions per case; a single case weak on a
+    single dimension fails the bar; a passing spot-check does not satisfy it.
+  - Criterion **G15** (goals/criteria.md, unmet): every case on point on every dimension —
+    answer + explanation + visual + animation — enforced by the whole-set sweep, not spot-checks.
+  - Check **CHK-014** (`tools/check_suite_quality.py`, registered active + PASSING): drives all
+    16 canonical descriptors (suite/problems.json + CATALOG) and asserts per case — answer
+    tool-verified (engine provenance, passing verification), scene well-formed (base layer at
+    step 0, known layer kinds, geometry present), every layer maps to a defined ENTRANCE
+    (draw/grow/fade — an unhandled kind that would pop in fails), and every walkthrough step
+    carries readable text. Passes now on answer/visual/animation + a shallow explanation check.
+  - Tightened G11 & G12 checks to run the automated portion over the WHOLE test set (via
+    CHK-014), reserving felt pacing / final legibility for the running app.
+  - Registry Phase-2 note rewritten: CHK-014 is the whole-set gate; the worker DEEPENS its
+    explanation assertions (bite-sized steps, staged calculations, readable formatting) as
+    G11/G12 land — editing the check SCRIPT is free (no registry-digest change) — and must keep
+    it a per-case, all-dimension gate (not narrowed to a spot-check). G13/G14 get their own
+    UI-wiring checks when built.
+  - Priming prompt + checkpoint updated with G15 / CHK-014 / C-SUITE-QUALITY.
+- **state:** verify.py GREEN (14/14, incl. CHK-014); gate 10/15 criteria met (G11–G15 unmet) →
+  correctly NOT done. validate.py drift on constraints/goal/checks — awaiting Clara's
+  `approve.py --baseline`.
+- **decision:** registered CHK-014 as a passing whole-suite sweep of the *currently-assertable*
+  dimensions NOW (so the "drive all cases" enforcement exists immediately and is real), rather
+  than as a failing check — the worker deepens its explanation assertions as the features land.
+  G15 stays unmet until that deepening enforces the full step/readability bar and passes.
+- **next:** unchanged — Clara `--baseline`, then seed worker + observer. Worker deepens CHK-014
+  alongside building G11–G14.

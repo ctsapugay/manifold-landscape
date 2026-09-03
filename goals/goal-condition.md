@@ -9,17 +9,23 @@ agent's to soften: see `constraints/defaults.md` (C-GOVERNED-CHANGE) and
 
 ## Status
 
-- **state:** met
-- **approved:** 2026-09-02 by Clara — expanded scope (agentic AI tutor; arbitrary problem
-  intake; fifth area, dynamical systems). The prior, narrower goal was met and shipped on
-  2026-09-02 (commit `f3d98d6`) and now serves as the foundation this expansion builds on.
-- **met:** 2026-09-02 — all nine criteria G1–G9 are `met` with recorded evidence in
-  `goals/criteria.md`; `python3 tools/verify.py` is GREEN (CHK-001…012 all passing, 0 waived);
-  every constraint held throughout. The one governed change needed (P-0003, registering the
-  agent checks + the ODE protected core) was approved by Clara this session and recorded as a
-  signed, agent-executed approval (`--on-behalf-of-clara`).
+- **state:** approved
+- **approved:** 2026-09-03 by Clara — **Phase 2: pedagogical depth.** After reviewing the
+  tutor on a multi-part Lorenz problem, Clara re-opened the finish line to require that the
+  agent genuinely *teaches* complex problems: bite-sized single-idea steps, calculations shown
+  stage by stage with matching visuals, clearly-formatted and readable text, an unhurried
+  reveal pace, per-step follow-up questions, and a toggleable chat history that never crowds the
+  visualization. This adds criteria **G11–G14** and the standing constraints **C-STEPWISE** and
+  **C-READABLE-OUTPUT**; nothing already met (G1–G10) is weakened.
+- **met (Phase 1):** 2026-09-02/03 — criteria **G1–G10** are `met` with recorded evidence in
+  `goals/criteria.md` and were green under `python3 tools/verify.py` (CHK-001…013). Phase 1
+  delivered the agentic AI tutor across five areas plus the draw-on animation system; it is the
+  working foundation Phase 2 improves. The governed changes it needed were approved by Clara
+  (P-0003 agent checks + ODE core; P-0004 draw-on constraint/criterion/check).
 - **history:** original goal approved 2026-09-01 ("Looks good to me. I approve everything.")
-  and met 2026-09-02 (six criteria, verify.py green); superseded by this expansion.
+  and met 2026-09-02 (six criteria); expanded 2026-09-02 to the agentic AI tutor + fifth area
+  (met 2026-09-02, G1–G9) and the draw-on animation (met 2026-09-03, G10); Phase 2 re-opens it
+  for pedagogical depth (G11–G14).
 
 ## Statement
 
@@ -34,8 +40,12 @@ the model computing math itself is a last resort). **By default it presents the 
 interactive three-dimensional visualization** the user can manipulate; and, **when the user
 asks for it**, it **tutors** — an optional step-by-step walkthrough that builds the
 visualization in sync, drives it to point at what matters, and answers follow-up questions at
-any step, grounded in the actual computed state. The agent's tool use is **inspectable**, and
-the visualization stays responsive while it thinks. It is built to make that geometry
+any step, grounded in the actual computed state. The tutoring is genuinely **pedagogical**: a
+complex problem is broken into small, bite-sized single-idea steps, longer calculations are
+shown stage by stage with the matching visual, the explanatory text is clearly formatted and
+readable, the reveal is paced so a learner can follow it, the user can interrogate any
+individual step, and their conversation history stays available without crowding the visual.
+The agent's tool use is **inspectable**, and the visualization stays responsive while it thinks. It is built to make that geometry
 genuinely understandable and to demonstrate both mathematical depth and agentic-AI craft, to
 a standard suitable as portfolio work.
 

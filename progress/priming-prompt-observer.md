@@ -43,9 +43,15 @@ chaos"); an AI AGENT interprets it and orchestrates deterministic tools to solve
 and explain it — every displayed value tool-computed and verified, or clearly labelled
 model-derived (C-VERIFIED-MATH; model math is a last resort). By default it gives the answer
 + an interactive 3D visual; on demand it TUTORS — an OPTIONAL step-by-step walkthrough that
-drives the visualization to point at things and answers follow-up questions at any step. A
-deterministic foundation (first four areas, basic 3D app) already shipped on main; the worker
-is now building the agentic tutor on top. The finish line (G1–G9) is in goals/.
+drives the visualization to point at things and answers follow-up questions at any step.
+Phase 1 is DONE and on main (G1–G10 met, CHK-001…013 green): the agentic tutor across all five
+areas plus the draw-on animation system. The worker is now on PHASE 2 (G11–G15, UNMET) — making
+the tutoring genuinely pedagogical: complex problems broken into small bite-sized steps with
+the work shown stage by stage, readable formatting, a slower/followable pace, follow-up
+questions about an individual step, a toggleable chat history that doesn't crowd the visual,
+and a whole-test-set quality gate that drives EVERY case and checks answer + explanation +
+visual + animation are on point (G15, CHK-014). The finish line (G1–G15) is in goals/; python3
+tools/status.py shows live progress.
 
 Your task is to check in when I ask and answer any questions I might have.
 

@@ -101,3 +101,47 @@ a criterion with `covers:`.
 - **check:** In the running app, solve a surface problem and watch it appear: the surface builds up from its centre (not a pop or whole-fade), the vector field fades in, and the walkthrough's final step frames the whole scene; then switch the surface's reveal — it becomes contour lines blooming from the centre — and switch back, confirming grow-from-centre is the default for each new problem and the toggle appears only where there is a surface to reveal. `tools/check_draw_on.py` (CHK-013) is the automated guard on the wiring and the reveal's source data.
 - **state:** met
 - **evidence:** 2026-09-03 — Implemented in `web/app.js`: `buildSurface` orders the surface triangles centre-outward so the progressive draw-range grows the mesh **from its centre**; `buildContours` emits level-set rings ordered centre-outward so they **bloom from the middle**; the top-bar `#contour-toggle` fades the surface out and blooms the contours in, and back, with `surfaceMode` reset to grow-from-centre for every new problem; the vector field fades in (`fadeIn`) and each walkthrough ends on a "The full picture" frame. Browser-verified live (offline brain, localhost:8765): the paraboloid `f = x²+y²` grew from its centre, "Contours" bloomed the nested level rings and "Surface" grew the mesh back — round trip clean at 60 fps; the toggle showed for surface scenes (scalar-fields, optimization) and stayed hidden for vector-fields / linear-algebra (no surface). CHK-013 (`tools/check_draw_on.py`) passes; the full suite CHK-001…013 is green and the 49-test unit suite passes.
+
+---
+
+> **Phase 2 — pedagogical depth (added 2026-09-03).** Criteria G11–G14 open a new phase: the
+> agent must genuinely *teach* a complex problem, not just solve and render it. They were
+> added when Clara reviewed the tutor on a multi-part Lorenz problem and found the walkthrough
+> too coarse, the text hard to read, the pacing too fast, with no way to interrogate an
+> individual step or to see chat history without crowding the visual. The goal condition
+> re-opens (`state: approved`) until these are met with evidence and the suite is green.
+
+## G11 — Complex problems are taught in small, followable steps, showing the work
+
+- **criterion:** When walked through a complex or multi-part problem, the tutor decomposes it into small steps that each introduce roughly one idea — a big step is broken down rather than delivered whole — and any calculation with several stages is shown as its sequence of intermediate results (not only its final answer), each step carrying the visual that matches it; the reveal and step-to-step pacing is unhurried enough that a first-time learner can follow each step before the next arrives.
+- **check:** The automated whole-test-set sweep in `checks/registry.md` (CHK-014) drives **every** case and confirms, per case, that the walkthrough is decomposed into small single-idea steps (not a few dense ones), every multi-stage calculation is shown stage by stage, and each step carries its matching visual — failing if any case falls short. In addition, walk a sample of complex, multi-part problems in the running app (including a full Lorenz problem: find the fixed points, classify their stability from the Jacobian eigenvalues, then integrate and render the trajectory) and confirm the felt pacing is comfortable to follow rather than faster than the eye can track. (Constraint C-STEPWISE.)
+- **state:** unmet
+- **evidence:**
+
+## G12 — The tutor's explanations are clearly formatted and readable
+
+- **criterion:** Every block of explanatory text the tutor shows is formatted so a learner can parse it: distinct steps and points are visually separated rather than run together, mathematical expressions read as notation a person recognizes rather than as raw machine source, and no explanation is an undifferentiated wall of text.
+- **check:** The automated whole-test-set sweep in `checks/registry.md` (CHK-014) confirms, for **every** case, that the tutor's explanatory output carries readable structure — steps/points separated, mathematics rendered as notation rather than raw source, no undifferentiated wall of text — failing if any case is off. Final legibility is confirmed by reading a sample in the running app. (Constraint C-READABLE-OUTPUT.)
+- **state:** unmet
+- **evidence:**
+
+## G13 — The user can ask follow-up questions about an individual step
+
+- **criterion:** While being walked through a problem, the user can ask a follow-up question about a specific step and get an answer that addresses that step, grounded in that step's computed and verified state (per G1 and G6), without losing their place in the walkthrough.
+- **check:** During a walkthrough, ask a question aimed at a particular step (e.g. "why is this eigenvalue negative?" on the stability step); the answer addresses that step's content, is grounded in the verified state and contradicts none of it, and the walkthrough position is preserved afterward. An automated slice in `checks/registry.md` exercises per-step questions.
+- **state:** unmet
+- **evidence:**
+
+## G14 — Chat history is available without crowding the visualization
+
+- **criterion:** The user can bring up their conversation history and dismiss it through a clean control; when hidden it does not occupy or crowd the visualization, and when shown it is readable — the history never permanently competes with the visual for space.
+- **check:** In the running app, toggle the conversation history open and closed: hidden leaves the visualization unobstructed, shown presents the history legibly, and the toggle is clean (no layout breakage, nothing stranded). An automated slice in `checks/registry.md` confirms the history control is wired to show/hide without occupying the visual by default.
+- **state:** unmet
+- **evidence:**
+
+## G15 — Every case in the test set is on point on every output dimension
+
+- **criterion:** Completion is judged by driving the whole test set — not a hand-picked few — and confirming, for each case, that all four output dimensions are on point: the answer is tool-computed and verified, the explanation is broken into small readable steps that show the work, the visualization is well-formed and correct for its area, and the entrance animation reveals every element with the right draw-on behaviour. A single case that is wrong or weak on a single dimension fails this; a passing spot-check does not satisfy it.
+- **check:** `tools/check_suite_quality.py` (CHK-014) drives every case in the test set and, per case, asserts the answer is verified, the explanation meets the step/readability bar (enforcing C-STEPWISE / C-READABLE-OUTPUT — including bite-sized single-idea steps and staged calculations, not merely non-blank text), the scene is well-formed and correct for its area, and every layer has its correct entrance; it exits nonzero if any case is off on any dimension. This criterion is met only once that sweep enforces the full step/readability bar and passes over the whole set, and a representative sample has been confirmed in the running app. (Constraint C-SUITE-QUALITY.)
+- **state:** unmet
+- **evidence:** In progress. CHK-014 already drives all 16 canonical cases and passes on the answer, visual (well-formed scene), and animation (every layer has a defined entrance) dimensions, plus a shallow explanation check (no blank steps). It is **not yet met**: the explanation assertions must be deepened to enforce the bite-sized-step and readable-formatting bar (G11/G12) across every case, which is Phase-2 work.

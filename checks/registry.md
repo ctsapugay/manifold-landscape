@@ -178,6 +178,14 @@ that must keep succeeding; the worker may still freely append more problems (to
 - **waived:**
 - **waived-by:**
 
+## CHK-014 — Whole-test-set output-quality sweep (answer, explanation, visual, animation)
+
+- **covers:** G15, G11, G12, C-SUITE-QUALITY
+- **run:** python3 tools/check_suite_quality.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
 <!--
 Note on G2 (C-INTERACTIVE). THRESHOLD: sustained 60 fps during manipulation, i.e. a frame
 cost at or below 16.7 ms/frame, on Clara's development machine. CHK-002 is the automated
@@ -210,5 +218,35 @@ REGISTERS NEW CHECKS (governed additions — propose them) and REVISES some exis
 
 Test-set governance (Clara's rule): a check must FAIL if any protected-core problem is
 removed or weakened, but adding problems is free and needs no approval.
+-->
+
+<!--
+PHASE 2 (2026-09-03, pedagogical depth). Criteria G11–G15 are UNMET and open new work.
+
+The enforcement Clara asked for — DRIVE EVERY test case and check the answer, explanation,
+visual, and animation are all on point per case — is CHK-014 (tools/check_suite_quality.py),
+already registered above and passing on the currently-assertable dimensions. The worker's job
+is to DEEPEN it (editing the script is free — it does not change the check's registry digest)
+so its EXPLANATION assertions enforce the real bar as the features land:
+  - G11 / C-STEPWISE  — per case: the walkthrough is decomposed into small single-idea steps
+    (not a few dense ones), multi-stage calculations are shown stage by stage, each step
+    carries its matching visual. (Felt pacing confirmed in the app on complex cases incl. the
+    full Lorenz problem: fixed points -> Jacobian-eigenvalue stability -> integrate + render.)
+  - G12 / C-READABLE-OUTPUT — per case: the explanatory text carries readable structure (steps
+    separated, math as notation not raw source, no undifferentiated wall of text).
+CHK-014 must remain a WHOLE-SET, PER-CASE, ALL-DIMENSION gate (C-SUITE-QUALITY): a single case
+weak on a single dimension fails it. Do not narrow it to a spot-check.
+
+Two more checks the worker REGISTERS as those features land (appends are auto-approved; keep
+each deterministic and offline — C-LOCAL):
+  - CHK-0NN (G13) — a follow-up question aimed at a specific step returns an answer addressing
+    that step, grounded in the verified state (grounded_in non-empty, model_derived=False,
+    contradicts nothing), with the walkthrough position preserved.
+  - CHK-0NN (G14) — the conversation-history control is wired to show/hide and does not occupy
+    the visualization by default (checked in the app source, like CHK-012/013).
+
+verify.py stays green on CHK-001…014, but the goal is NOT met until G11–G15 are met (the gate
+is criteria-met AND checks-green together), which requires CHK-014 deepened + G13/G14 checks
+registered + the app-confirmed evidence recorded.
 -->
 
