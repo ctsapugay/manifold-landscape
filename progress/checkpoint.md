@@ -17,35 +17,35 @@ long, degraded one. This is **progress, not governed content**.
 ---
 
 - **updated:** 2026-09-03
-- **phase:** ✅ **PHASE 2 COMPLETE — pedagogical depth (G11–G15 MET).** Completion gate reads
-  **✓ COMPLETE**: 15/15 criteria met, `python3 tools/verify.py` GREEN (16/16, CHK-001…016),
-  65-test unit suite green. Goal-condition `state: met`. G1–G10 not weakened.
-- **⚠️ ONE GOVERNANCE STEP FOR CLARA (only remaining item):** two checks were APPENDED —
-  **CHK-015** (`tools/check_step_followup.py`, G13) and **CHK-016**
-  (`tools/check_history_toggle.py`, G14). `validate.py` shows the ONLY drift is `checks`.
-  Clara records them into the signed baseline with **`python3 tools/approve.py --baseline`**
-  (she pre-authorised appends in the /goal message; the agent did NOT self-approve). Marking
-  criteria met and deepening CHK-014's script are NOT governed drift (verified: `canonical_goal`
-  excludes criterion state; check scripts aren't hashed — only registry.md fields are).
-- **what shipped (Phase 2):**
-  - `engine/notation.py` — raw expr → readable notation, display-only/value-preserving.
-  - `engine/lesson.py` — `build_lesson()` → fine-grained, staged, readable walkthrough
-    (`scene["lesson"]`); Lorenz = 17 steps, per-equilibrium Jacobian→eigenvalues→classify
-    staged. Attached in `web/problems.py` WITHOUT touching `scene["steps"]`/`layers`.
-  - Frontend: rich staged card (title + separated say/math/calc/note + "stage i/N" chip),
-    slower pacing (DRAW_DUR 4200), per-step "ask about this step" (G13), History toggle (G14).
-  - Backend G13: `Explainer.answer_about` + `Agent.answer_step` (grounded, place-preserving),
-    `/api/agent` `step` context.
-  - Checks: CHK-014 DEEPENED to the full G11/G12 per-case bar + pacing floor; CHK-015/016 added;
-    `tests/test_lesson.py` (16 tests, suite 49→65).
-- **app-verified (offline brain, localhost):** Clara's full multi-part Lorenz problem walked as
-  18 staged beats; per-step follow-up grounded + place preserved (6/18); history toggles without
-  crowding; 0.34 ms/frame (C-INTERACTIVE). Scalar saddle staged its Hessian.
-- **guardrails held:** `scene["layers"]`+step tags unchanged; notation never alters a verified
-  value (C-VERIFIED-MATH); all offline on base python3 (C-LOCAL); math stays tool-computed+verified.
-- **HOW TO RUN:** live `./.venv/bin/python web/server.py` → :8765; offline visual
-  `ANTHROPIC_API_KEY="" python3 web/server.py`; checks `python3 tools/verify.py`.
-- **next:** nothing to build — do NOT work past the finish line. Clara: `approve.py --baseline`
-  to record CHK-015/016. Live-path (real Claude) spot-check optional — the lesson is
-  brain-independent (built by the deterministic engine), so the offline verification carries.
+- **phase:** ✅ **PHASE 3 COMPLETE — the conversation redesign (G16–G20 MET).** Completion gate
+  **✓ COMPLETE**: 20/20 criteria met, `python3 tools/verify.py` GREEN (21/21, CHK-001…021),
+  65-test unit suite green. G1–G15 not weakened. Being recorded + committed + pushed.
+- **what shipped (Phase 3 — Clara-initiated, combined A+C design):**
+  - **One conversation (G16):** frontend rebuilt around a single dock/thread — walkthrough steps,
+    user questions and agent answers are all messages in one `#thread` with one composer; the
+    separate tutor card / per-step input / history panel are gone. (`web/index.html`, `web/app.js`
+    UI half rewritten, `web/style.css` Phase-3 section.)
+  - **Agent-driven answers (G17):** `Agent.answer_step` routes through the brain — live
+    `ClaudeBrain.answer_step` (step + verified values injected) or offline Explainer; grounding
+    gate labels un-verified figures. Fixes the Phase-2 "deterministic answer" bug.
+  - **Suggested prompts (G18):** clickable chips at the top of the dock incl. "show me the next
+    step" (advances the walkthrough + drives the visual via `nextStep`); launcher example chips.
+  - **Start→session→new-chat + collapsible (G19):** centred `#launcher`; `startSession` seeds the
+    opening prompt as the first thread entry; `#new-chat` returns to the launcher; dock collapses
+    to a left-edge `#dock-tab`.
+  - **Expandable bounds (G20):** `Agent.rescale` re-solves the current descriptor over a scaled
+    domain (`/api/rescale`), verified like any solve; gated off for linear-algebra.
+  - Checks: CHK-016 updated for the new model (G14 still holds); CHK-017…021 added for G16–G20.
+- **app-verified (offline brain, localhost):** full flow — launcher → Lorenz session (thread =
+  prompt + answer + streamed staged steps) → "walk me through it"/"next step" advance + drive
+  visual → inline grounded follow-up with place preserved → collapse/reopen → new chat → scalar
+  field → **bounds ×3 grew the paraboloid**, Lorenz ×2, bounds hidden for a matrix. No console errors.
+- **guardrails held:** scene/animation/draw-on machinery untouched (CHK-012/013 tokens preserved);
+  math tool-computed + verified incl. rescaled scenes (C-VERIFIED-MATH); offline on base python3.
+- **HOW TO RUN:** live `./.venv/bin/python web/server.py` → :8765; offline `ANTHROPIC_API_KEY=""
+  python3 web/server.py`; checks `python3 tools/verify.py`.
+- **note:** a pre-existing `.venv` server on :8765 (not started by this session) was stopped by a
+  broad `pkill` during testing — just a dev server; relaunch with the run command.
+- **next:** record baseline (Clara-initiated Phase-3 change) + commit code + push. Then done —
+  do NOT work past the finish line.
 - **open blockers:** none.

@@ -202,6 +202,46 @@ that must keep succeeding; the worker may still freely append more problems (to
 - **waived:**
 - **waived-by:**
 
+## CHK-017 — The explanation and the conversation are one thread
+
+- **covers:** G16
+- **run:** python3 tools/check_one_thread.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-018 — Follow-ups are answered by the agent, grounded
+
+- **covers:** G17
+- **run:** python3 tools/check_agent_answers.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-019 — The user is offered clickable suggested prompts
+
+- **covers:** G18
+- **run:** python3 tools/check_suggested_prompts.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-020 — Start → session → new chat, conversation collapsible
+
+- **covers:** G19
+- **run:** python3 tools/check_session_flow.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-021 — The visualization's bounds can be expanded where meaningful
+
+- **covers:** G20
+- **run:** python3 tools/check_expandable_bounds.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
 <!--
 Note on G2 (C-INTERACTIVE). THRESHOLD: sustained 60 fps during manipulation, i.e. a frame
 cost at or below 16.7 ms/frame, on Clara's development machine. CHK-002 is the automated
@@ -264,5 +304,28 @@ each deterministic and offline — C-LOCAL):
 verify.py stays green on CHK-001…014, but the goal is NOT met until G11–G15 are met (the gate
 is criteria-met AND checks-green together), which requires CHK-014 deepened + G13/G14 checks
 registered + the app-confirmed evidence recorded.
+-->
+
+<!--
+PHASE 3 (2026-09-03, the conversation redesign). Criteria G16–G20 are UNMET and open new work:
+the explanation and the chat become one thread; follow-ups are answered by the AGENT itself
+(the Phase-2 gap — answer_step used the deterministic explainer even with the live agent up),
+grounded in the step's verified state; clickable suggested prompts (incl. next-step); a
+start→session→new-chat flow with a collapsible conversation; and an expandable visualization
+domain. The worker REGISTERS these checks as each lands (appends auto-approved; keep each
+deterministic + offline — C-LOCAL):
+  - CHK-017 (G16) — single-thread conversation is wired (one composer, steps as thread messages,
+    no separate history panel element) — app-source slice like CHK-012/013/016.
+  - CHK-018 (G17) — per-step follow-up routes through the AGENT BRAIN when a (canned) client is
+    present and through the deterministic explainer offline; both grounded + verified-or-labelled.
+  - CHK-019 (G18) — clickable suggested-prompt controls exist, including a next-step suggestion.
+  - CHK-020 (G19) — the launcher (start) state, the new-chat control, and the collapsible
+    conversation are wired.
+  - CHK-021 (G20) — re-solving a descriptor over an EXPANDED domain yields a larger, still-verified
+    scene; the control is gated to domain-based areas (not linear-algebra).
+The existing app-source checks (CHK-012 transparency, CHK-013 draw-on, CHK-016 history) may need
+their grepped element ids updated to the redesigned DOM — editing a check SCRIPT is free (no
+registry digest change) — WITHOUT weakening what they assert (the behaviours they guard for
+G7/G10/G14 must still hold). CHK-014's whole-set quality gate must stay green through the rebuild.
 -->
 

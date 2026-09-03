@@ -54,7 +54,14 @@ When this exists, the following are true that are not true today:
    and **drives it** (zooming to a minimum, highlighting a saddle, transforming a surface) to
    point at what it is explaining.
 6. The user can **ask the tutor questions** whenever they want and get answers grounded in
-   the problem's actual computed state, contradicting nothing the engine found.
+   the problem's actual computed state, contradicting nothing the engine found. The explanation
+   and the chat are **one conversation** — the walkthrough's steps are messages in the same
+   thread the user talks in — and a follow-up is answered by **the agent itself**, not a canned
+   template, grounded in the relevant step's verified state. Clickable **suggested prompts**
+   (including advancing to the next step) keep common moves a click away; the conversation opens
+   from a single **start state** that a **new chat** returns to, and can be **collapsed** so the
+   visualization takes the full space. Where a visualization is drawn over a domain, the user can
+   **expand its bounds** and see the geometry re-computed (still tool-verified) over more space.
 7. The experience is **transparent and responsive**: the user can toggle a view of the
    agent's tool-calls (what it computed), a visible indicator shows while the agent works,
    and the visualization stays smooth while it thinks.

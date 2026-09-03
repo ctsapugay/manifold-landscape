@@ -10,6 +10,12 @@ agent's to soften: see `constraints/defaults.md` (C-GOVERNED-CHANGE) and
 ## Status
 
 - **state:** approved
+- **reopened:** 2026-09-03 by Clara — **Phase 3: the conversation redesign.** Unify the
+  explanation and the chat into a single conversation thread; answer follow-ups with the AI agent
+  itself (a Phase-2 gap — they were answered by the deterministic explainer even with the live
+  agent available); offer clickable suggested prompts (including advancing to the next step); add
+  a start→session→new-chat flow with a collapsible conversation; and let the visualization's
+  domain be expanded. This adds criteria **G16–G20**; nothing already met (G1–G15) is weakened.
 - **approved:** 2026-09-03 by Clara — **Phase 2: pedagogical depth.** After reviewing the
   tutor on a multi-part Lorenz problem, Clara re-opened the finish line to require that the
   agent genuinely *teaches* complex problems: bite-sized single-idea steps, calculations shown
@@ -52,11 +58,17 @@ visualization in sync, drives it to point at what matters, and answers follow-up
 any step, grounded in the actual computed state. The tutoring is genuinely **pedagogical**: a
 complex problem is broken into small, bite-sized single-idea steps, longer calculations are
 shown stage by stage with the matching visual, the explanatory text is clearly formatted and
-readable, the reveal is paced so a learner can follow it, the user can interrogate any
-individual step, and their conversation history stays available without crowding the visual.
-The agent's tool use is **inspectable**, and the visualization stays responsive while it thinks. It is built to make that geometry
-genuinely understandable and to demonstrate both mathematical depth and agentic-AI craft, to
-a standard suitable as portfolio work.
+readable, the reveal is paced so a learner can follow it, and the user can interrogate any
+individual step. The explanation and the chat are **one conversation**: the walkthrough's
+steps appear as messages in the same thread the user talks in, follow-up questions are answered
+by the **agent itself** grounded in the relevant step's verified state, clickable suggested
+prompts (including advancing to the next step) keep common moves a click away, and the
+conversation can be collapsed so the visualization takes the full space — opened from a single
+start state that a "new chat" returns to. Where a visualization is drawn over a domain, the user
+can **expand the bounds** and see the geometry re-computed (still tool-verified) over the larger
+region. The agent's tool use is **inspectable**, and the visualization stays responsive while it
+thinks. It is built to make that geometry genuinely understandable and to demonstrate both
+mathematical depth and agentic-AI craft, to a standard suitable as portfolio work.
 
 ## What completion requires
 
