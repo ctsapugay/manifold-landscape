@@ -186,6 +186,22 @@ that must keep succeeding; the worker may still freely append more problems (to
 - **waived:**
 - **waived-by:**
 
+## CHK-015 — Per-step follow-up questions, grounded in that step's verified state
+
+- **covers:** G13
+- **run:** python3 tools/check_step_followup.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-016 — Chat history is available without crowding the visualization
+
+- **covers:** G14
+- **run:** python3 tools/check_history_toggle.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
 <!--
 Note on G2 (C-INTERACTIVE). THRESHOLD: sustained 60 fps during manipulation, i.e. a frame
 cost at or below 16.7 ms/frame, on Clara's development machine. CHK-002 is the automated

@@ -17,6 +17,15 @@ agent's to soften: see `constraints/defaults.md` (C-GOVERNED-CHANGE) and
   reveal pace, per-step follow-up questions, and a toggleable chat history that never crowds the
   visualization. This adds criteria **G11–G14** and the standing constraints **C-STEPWISE** and
   **C-READABLE-OUTPUT**; nothing already met (G1–G10) is weakened.
+- **met (Phase 2):** 2026-09-03 — criteria **G11–G15** are `met` with recorded evidence in
+  `goals/criteria.md`; `python3 tools/verify.py` is green (16/16, CHK-001…016) and the 65-test
+  unit suite passes. Phase 2 delivered the pedagogy layer (`engine/lesson.py`,
+  `engine/notation.py`) — small staged readable steps, a grounded per-step follow-up
+  (`Agent.answer_step`), a non-crowding chat-history toggle, and a slower reveal pace; the
+  whole-set gate CHK-014 was deepened to enforce the step/readability bar per case, and
+  CHK-015/016 were added for the per-step follow-up and the history control. Nothing in G1–G10
+  was weakened; this baseline records those two appended checks. The `approved` state marks the
+  agreed governed finish line (completion is tracked by the met criteria + the green suite).
 - **met (Phase 1):** 2026-09-02/03 — criteria **G1–G10** are `met` with recorded evidence in
   `goals/criteria.md` and were green under `python3 tools/verify.py` (CHK-001…013). Phase 1
   delivered the agentic AI tutor across five areas plus the draw-on animation system; it is the

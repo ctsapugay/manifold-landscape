@@ -883,3 +883,68 @@ reader: state, not narrative.
   G15 stays unmet until that deepening enforces the full step/readability bar and passes.
 - **next:** unchanged — Clara `--baseline`, then seed worker + observer. Worker deepens CHK-014
   alongside building G11–G14.
+
+## 2026-09-03 — Phase 2 built: pedagogical depth (G11–G15 met)
+
+- **state:** ✅ **Phase 2 COMPLETE.** Completion gate reads ✓ COMPLETE — 15/15 criteria met,
+  `python3 tools/verify.py` GREEN (16/16, CHK-001…016), 65-test unit suite green. Goal-condition
+  state set to `met`. One governance step remains for Clara: record the two appended checks
+  (CHK-015, CHK-016) into the signed baseline via `python3 tools/approve.py --baseline`
+  (validate shows the only drift is `checks`; she pre-authorized appends in the /goal message).
+- **done (the pedagogy layer):**
+  - `engine/notation.py` — `to_notation` renders raw expr source as readable notation
+    (`x**2 + 3*y**2` → `x² + 3y²`, `10*(y - x)` → `10(y − x)`); display-only, value-preserving.
+  - `engine/lesson.py` — `build_lesson(sol, scene, descriptor)` decomposes a verified solution
+    into many small single-idea steps, each `{id,title,reveal,focus,focus_target,quantity,
+    verified,stage,lines[]}`; multi-stage calcs (Jacobian→eigenvalues→classify; descent
+    f-values; Hessian classify; eigen/SVD; Lyapunov) shown STAGE BY STAGE. Grounded by
+    construction (numbers pulled from verified quantities). Lorenz → 17 steps / 4 stage groups.
+  - `web/problems.py` attaches `scene["lesson"]` in every branch, leaving `scene["steps"]` +
+    `layers` (the geometry-reveal contract CHK-003/005/011/013 read) UNTOUCHED. Brains set
+    `walkthrough = lesson or steps`.
+  - Frontend (`web/app.js`, `index.html`, `style.css`): rich beats render title + separated
+    say/math/calc/note blocks + a "stage i/N" chip + verified badge; pacing slowed
+    (DRAW_DUR 2600→4200, GROW 620→1100, FADE 850→1300); results panel + headline routed
+    through a JS `notation()` mirror.
+  - **G13** per-step follow-up: `Explainer.answer_about(q, quantity)`, `Agent.answer_step`
+    (grounded, deterministic, does NOT mutate `self.current`/history → place preserved),
+    `/api/agent` accepts a `step` context, a "Ask about this step…" input shows the answer
+    inline without changing the beat.
+  - **G14** history: a top-bar History chip toggles a `#history-panel` hidden-by-default
+    floating overlay; `pushHistory`/`renderHistory` log every user+tutor turn.
+- **done (enforcement / checks):**
+  - CHK-014 (`tools/check_suite_quality.py`) DEEPENED (editing the script is free — no registry
+    digest change): drives all 16 cases; per case enforces the full G11/G12 bar (step count
+    scaled to content, contiguous multi-stage groups, per-step visual mapping, single-idea line
+    caps, readable notation with no raw `**`/`*`, no walls, verified-step-rests-on-verified-
+    quantity) + a DRAW_DUR pacing floor. Whole-set, per-case, all-dimension — not a spot-check.
+  - CHK-015 (`tools/check_step_followup.py`, G13) + CHK-016 (`tools/check_history_toggle.py`,
+    G14) REGISTERED (appends — auto-approved per Clara's /goal standing policy).
+  - `tests/test_lesson.py` (16 tests) covers notation, lesson decomposition/staging, and
+    grounded place-preserving answer_step. Total unit suite 49→65.
+- **verified in the running app (offline brain, localhost):** Clara's full multi-part Lorenz
+  problem → 18 beats: system stated component-by-component, flow field, 3 equilibria, each
+  classified in 3 stages (Jacobian → `λ = −13.9, 0.094 ± 10.2i` → saddle-focus), trajectory,
+  3-stage chaos test; slowed draw-on observed; view drove to each equilibrium. Per-step Q ("why
+  is one of these eigenvalues positive?") answered grounded-in-stability inline, counter stayed
+  6/18 (place preserved). History toggle opened/closed cleanly without crowding; bench 0.34
+  ms/frame on the Lorenz scene (C-INTERACTIVE). Scalar saddle staged its Hessian (`eigenvalues
+  −2, 2` → saddle).
+- **decisions:** (1) Put pedagogy in a dedicated `engine/lesson.py` rather than in the engine
+  solvers — one place to decompose/stage and one place CHK-014 asserts on, engine solvers stay
+  pure. (2) Kept `scene["steps"]`/`layers` byte-for-byte and ADDED `scene["lesson"]`, so no
+  geometry/G4/G10 check moved. (3) Notation is display-only and guarded (frontend only
+  notation-ises titles containing `*`, so descriptive titles like "3-D" are untouched); never
+  alters a verified value (C-VERIFIED-MATH intact). (4) G13 answered through the grounded
+  Explainer path (deterministic, offline-checkable), not the LLM, so it's provably grounded and
+  place-preserving. (5) Registered G13/G14 as separate checks (per the registry's Phase-2 note)
+  rather than folding into CHK-014 — accepting one governance re-baseline, which is Clara's.
+- **next:** Clara records CHK-015/016 into the baseline (`approve.py --baseline`). Nothing else
+  open. Do not work past the finish line.
+- **blockers:** none.
+
+## 2026-09-03 — Delegated approval (agent-executed)
+
+- APPROVED: BASELINE
+- Clara's stated authority, verbatim: "yes approve the stuff for me"
+- Attribution mode makes this an audit record, not proof the authority was real. Enable signing (docs/governance.md) for approval the agent cannot forge.
