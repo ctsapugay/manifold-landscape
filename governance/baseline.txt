@@ -1,12 +1,13 @@
 # Approved baseline. Written by tools/approve.py -- do not hand-edit.
 # Hand-editing this file is exactly the tampering validate.py looks for.
 version 1
-updated 2026-09-02T18:03:35
-constraints d6f0683cc2898312ddbf5da8f7a870bc9757e4a799c3e59f81b2085a5c8375c9
-goal 599400ee51b4625261b5f92f32768745f57b802b897d9d81b589620eeadb4330
+updated 2026-09-03T10:34:58
+constraints df198ef625dfdad6b5db3cccf9ed0fb664f88950a830ed0ef3584a821537ee0f
+goal 65cd342498a9fcab6ee96ee59b55d7e09871153a31501b845c8763453c1e0510
 tools fe0c7137de0f34f5fff2bbe16309e73e7253af52d9a8b82356c30a78782dff86
 trust 34af6534a98bb0ab759795cb64a58acd3ec6bf8b5fd8839971763df72b0f1325
-checks 6be23282951888235d551515ee31d189a0973c7492095703c32be7aa4c4f1321
+checks 2b95abcd8c49fff77a51219b24e7f07295758af79a0bcd77860c1387c3943c2f
 approved P-0001
 approved P-0002
 approved P-0003
+approved P-0004
