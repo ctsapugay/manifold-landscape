@@ -39,6 +39,46 @@ def _dyn_solution(d: dict, pid: str, title: str):
     )
 
 
+# A grounded question per walkthrough step, so each step's narration comes from the same
+# verified Explainer the chat uses — one place, applied to every area.
+_STEP_Q = {
+    "gradient": "what is the gradient?",
+    "hessian": "explain the hessian",
+    "critical_points": "where are the critical points?",
+    "descent": "did the descent converge?",
+    "minimum": "where is the minimum?",
+    "constrained_optimum": "explain the lagrange multiplier",
+    "divergence": "what is the divergence?",
+    "curl": "what is the curl?",
+    "determinant": "what is the determinant?",
+    "eigen": "what are the eigenvalues?",
+    "svd": "what are the singular values?",
+    "fixed_points": "where are the equilibria?",
+    "stability": "explain the stability",
+    "trajectory_1": "explain the trajectory",
+    "separation": "explain sensitive dependence",
+}
+
+
+def _narrate(sol) -> None:
+    """Attach a short, grounded per-step ``description`` to each walkthrough step, drawn from
+    the verified Explainer — so a stepped walkthrough reads as intuitive prose, not bare
+    labels. Applied uniformly to every area; steps whose quantity has no mapping keep their
+    label. Never raises."""
+    try:
+        ex = Explainer(sol)
+    except Exception:
+        return
+    for s in sol.steps:
+        q = _STEP_Q.get(s.get("quantity", ""))
+        if not q:
+            continue
+        try:
+            s["description"] = ex.answer(q)["answer"]
+        except Exception:
+            pass
+
+
 def solve_descriptor(d: dict) -> dict:
     """Return a scene dict (verified quantities + step-tagged geometry) for descriptor ``d``."""
     area = d["area"]
@@ -49,18 +89,21 @@ def solve_descriptor(d: dict) -> dict:
         field = ScalarField(d["expr"], d.get("vars", ("x", "y")))
         domain = tuple(tuple(p) for p in d.get("domain", ((-3, 3), (-3, 3))))
         sol = field.solve(pid, title, domain=domain).require_verified()
+        _narrate(sol)
         return S.build_scalar_scene(field, sol, domain=domain)
 
     if area == "optimization":
         if d.get("subtype") == "constrained":
             prob = ConstrainedProblem(d["f"], d["g"], d.get("vars", ("x", "y")))
             sol = prob.solve(pid, title).require_verified()
+            _narrate(sol)
             # constrained optima render on the constraint curve; reuse the scalar surface
             field = ScalarField(d["f"], d.get("vars", ("x", "y")))
             domain = tuple(tuple(p) for p in d.get("domain", ((-3, 3), (-3, 3))))
             scene = S.build_scalar_scene(field, ScalarField(d["f"]).solve(pid, title, domain),
                                          domain=domain)
             scene["area"] = "optimization"
+            scene["steps"] = sol.steps          # the constrained walkthrough (with narration)
             scene["quantities"] = [q.to_dict() for q in sol.quantities]
             opt = sol.get("constrained_optimum").value
             scene["layers"].append({
@@ -74,11 +117,13 @@ def solve_descriptor(d: dict) -> dict:
         domain = tuple(tuple(p) for p in d.get("domain", ((-3, 3), (-3, 3))))
         sol = land.solve_descent(pid, title, start=d.get("start", [2.0, 2.0]),
                                  lr=d.get("lr", 0.05), steps=d.get("steps", 80)).require_verified()
+        _narrate(sol)
         return S.build_optimization_scene(land, sol, domain=domain)
 
     if area == "vector-fields":
         vf = VectorField(d["components"], d["vars"])
         sol = vf.solve(pid, title).require_verified()
+        _narrate(sol)
         dom = tuple(tuple(p) for p in d.get("domain", ((-2, 2), (-2, 2))))
         return S.build_vector_scene(vf, sol, domain=dom)
 
@@ -86,11 +131,13 @@ def solve_descriptor(d: dict) -> dict:
         T = LinearTransformation(d["matrix"])
         want = tuple(d.get("want", ("determinant", "eigen")))
         sol = T.solve(pid, title, want=want).require_verified()
+        _narrate(sol)
         return S.build_linear_scene(T, sol)
 
     if area == "dynamical-systems":
         ds, sol = _dyn_solution(d, pid, title)
         sol.require_verified()
+        _narrate(sol)
         return S.build_dynamics_scene(ds, sol, domain=_dyn_domain(d))
 
     raise ValueError(f"unknown area: {area!r}")

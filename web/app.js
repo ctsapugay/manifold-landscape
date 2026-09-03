@@ -59,6 +59,17 @@ function animate() {
       if (p >= 1) drawAnim.splice(i, 1);
     }
   }
+  // non-curve layers fade in on reveal (so surfaces/arrows/points don't pop)
+  if (fades.length) {
+    const now3 = performance.now();
+    for (let i = fades.length - 1; i >= 0; i--) {
+      const f = fades[i];
+      const p = Math.min(1, (now3 - f.t0) / f.dur);
+      const e = p * p * (3 - 2 * p);
+      for (const m of f.ents) m.m.opacity = m.o0 * e;
+      if (p >= 1) { for (const m of f.ents) { m.m.opacity = m.o0; m.m.transparent = m.tr; } fades.splice(i, 1); }
+    }
+  }
   controls.update();
   renderer.render(scene, camera);
   _frames++;
@@ -82,9 +93,11 @@ let currentId = null;
 let _frames = 0, _fps = 0, _lastFpsT = performance.now();
 let sceneData = null;
 let fieldHidden = false;               // vector-field toggle state
-let drawLines = [];                    // {line, count} — curves that draw themselves in
+let drawLines = [];                    // {line, count, step} — curves that draw themselves in
 let drawAnim = [];                     // {line, count, t0, dur} — currently animating
+let fades = [];                        // {ents, t0, dur} — non-curve layers fading in on reveal
 const DRAW_DUR = 1600;
+const FADE_DUR = 550;
 
 // tutor-driven view: an eased focus target + a pulsing highlight marker (criterion G5)
 let focusTarget = null;      // THREE.Vector3 the controls ease toward
@@ -283,27 +296,50 @@ function buildScene(data) {
     obj.userData.step = layer.step;
     obj.userData.isField = layer.type === "vectors" && FIELD_IDS.has(layer.id);
     contentGroup.add(obj);
-    layerObjects.push({ object: obj, step: layer.step });
-    // collect self-drawing curves (trajectories, image ellipses, descent paths)
+    layerObjects.push({ object: obj, step: layer.step, type: layer.type, wasVisible: false });
+    // collect self-drawing curves (trajectories, image ellipses, descent paths); each is
+    // drawn in the moment its layer is first revealed, so a walkthrough draws piece by piece
     if (layer.type === "polyline" || layer.type === "curve") {
       obj.traverse((o) => {
         if (o.isLine && o.geometry.getAttribute("position")) {
-          drawLines.push({ line: o, count: o.geometry.getAttribute("position").count });
+          o.userData.wasVisible = false;
+          o.geometry.setDrawRange(0, 2);
+          drawLines.push({ line: o, count: o.geometry.getAttribute("position").count, step: layer.step });
         }
       });
     }
   }
   steps = data.steps || [];
   maxStep = layerObjects.reduce((m, l) => Math.max(m, l.step), 0);
-  setStep(maxStep); // show the finished scene first
-  fitCamera();
-  startDrawIn();
+  setStep(maxStep); // reveals every layer and triggers each curve's draw-in
+  frameScene(false); // snap to a good first framing, then let steps ease from here
 }
 
-// (re)start the self-drawing animation for every curve in the scene
+// fade a (non-curve) layer object in on first reveal; restores material state when done
+function fadeIn(obj) {
+  const ents = [];
+  obj.traverse((o) => {
+    if (!o.material) return;
+    const arr = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of arr) ents.push({ m, o0: (m.opacity == null ? 1 : m.opacity), tr: m.transparent });
+  });
+  if (!ents.length) return;
+  for (const e of ents) { e.m.transparent = true; e.m.opacity = 0; }
+  fades.push({ ents, t0: performance.now(), dur: FADE_DUR });
+}
+
+// draw one curve in from scratch
+function triggerDraw(line, count) {
+  for (let i = drawAnim.length - 1; i >= 0; i--) if (drawAnim[i].line === line) drawAnim.splice(i, 1);
+  line.geometry.setDrawRange(0, 2);
+  drawAnim.push({ line, count, t0: performance.now(), dur: DRAW_DUR });
+}
+
+// replay: forget what has entered, so re-revealing draws curves and fades layers in again
 function startDrawIn() {
-  drawAnim = drawLines.map((d) => ({ ...d, t0: performance.now(), dur: DRAW_DUR }));
-  for (const d of drawLines) d.line.geometry.setDrawRange(0, 2);
+  drawAnim = []; fades = [];
+  for (const d of drawLines) { d.line.userData.wasVisible = false; d.line.geometry.setDrawRange(0, 2); }
+  for (const l of layerObjects) l.wasVisible = false;
 }
 
 // reveal up to step k and fly the camera to the geometry that step introduces (G5)
@@ -322,20 +358,26 @@ function focusStep(k) {
   }
 }
 
-function fitCamera() {
+// Frame the whole scene. ease=true glides there (used for every step/overview move so the
+// camera never snaps); ease=false sets it immediately (used once, for the first framing).
+function frameScene(ease = true) {
   const box = new THREE.Box3().setFromObject(contentGroup);
   if (box.isEmpty()) return;
   const sphere = box.getBoundingSphere(new THREE.Sphere());
   const r = Math.max(sphere.radius, 0.5);
-  controls.target.copy(sphere.center);
   const dist = r / Math.sin((camera.fov * Math.PI) / 180 / 2) * 1.15;
-  const dir = new THREE.Vector3(1, -1.1, 0.75).normalize();
-  camera.position.copy(sphere.center).addScaledVector(dir, dist);
-  camera.near = dist / 100;
-  camera.far = dist * 100;
+  // keep the current viewing direction if we already have a scene, else a pleasing default
+  let dir = camera.position.clone().sub(controls.target);
+  if (dir.lengthSq() < 1e-6) dir = new THREE.Vector3(1, -1.1, 0.75);
+  dir.normalize();
+  const pos = sphere.center.clone().addScaledVector(dir, dist);
+  // set clipping planes generously up front so nothing pops during the glide
+  camera.near = Math.max(dist / 200, 0.001); camera.far = dist * 200;
   camera.updateProjectionMatrix();
-  controls.update();
+  if (ease) { focusTarget = sphere.center.clone(); focusCamPos = pos; }
+  else { controls.target.copy(sphere.center); camera.position.copy(pos); focusTarget = null; focusCamPos = null; controls.update(); }
 }
+function fitCamera() { frameScene(true); }
 
 function setStep(k) {
   currentStep = Math.max(0, Math.min(maxStep, k));
@@ -343,6 +385,15 @@ function setStep(k) {
     let vis = l.step <= currentStep;
     if (fieldHidden && l.object.userData.isField) vis = false;
     l.object.visible = vis;
+    // non-curve layers fade in on first reveal (curves draw in instead, below)
+    if (vis && !l.wasVisible && l.type !== "polyline" && l.type !== "curve") fadeIn(l.object);
+    l.wasVisible = vis;
+  }
+  // a curve draws itself in the moment its layer is first revealed
+  for (const d of drawLines) {
+    const now = d.step <= currentStep;
+    if (now && !d.line.userData.wasVisible) triggerDraw(d.line, d.count);
+    d.line.userData.wasVisible = now;
   }
 }
 
@@ -489,8 +540,9 @@ function newProblem(r) {
   beats = [{ label: area || "Answer", text: r.answer, focus: "fit", revealStep: maxStep,
              verified: allVerified(r.quantities) && !r.model_derived, model_derived: r.model_derived }];
   for (const s of (r.walkthrough || [])) {
-    beats.push({ label: `Step ${s.step} · ${s.introduces}`, text: layerLabel(s.step) || s.introduces,
-                 focus: { step: s.step }, revealStep: s.step, verified: false, model_derived: false });
+    beats.push({ label: s.introduces, text: s.description || layerLabel(s.step) || s.introduces,
+                 focus: { step: s.step }, revealStep: s.step,
+                 verified: !!s.description, model_derived: false });
   }
   beatIdx = 0;
   tutorCard.hidden = false;
