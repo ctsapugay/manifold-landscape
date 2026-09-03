@@ -170,6 +170,14 @@ that must keep succeeding; the worker may still freely append more problems (to
 - **waived:**
 - **waived-by:**
 
+## CHK-013 — Shapes draw on, and a surface's reveal style is switchable
+
+- **covers:** G10, C-DRAW-ON
+- **run:** python3 tools/check_draw_on.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
 <!--
 Note on G2 (C-INTERACTIVE). THRESHOLD: sustained 60 fps during manipulation, i.e. a frame
 cost at or below 16.7 ms/frame, on Clara's development machine. CHK-002 is the automated

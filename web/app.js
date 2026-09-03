@@ -65,13 +65,20 @@ function animate() {
     for (const m of g.meshes) m.mesh.scale.setScalar(Math.max(0.001, e) * m.base);
     if (p >= 1) { for (const m of g.meshes) m.mesh.scale.setScalar(m.base); growAnim.splice(i, 1); }
   }
-  // the vector field / scalar grids fade in behind the drawing wavefront
+  // the vector field / scalar grids fade in behind the drawing wavefront; the same loop
+  // fades a shape OUT when the user switches surface⇄contour (dir < 0), restoring its
+  // material state at the end so it draws cleanly if shown again
   for (let i = fades.length - 1; i >= 0; i--) {
     const f = fades[i];
     const p = Math.min(1, (tnow - f.t0) / f.dur);
     const e = p * p * (3 - 2 * p);
-    for (const m of f.ents) m.m.opacity = m.o0 * e;
-    if (p >= 1) { for (const m of f.ents) { m.m.opacity = m.o0; m.m.transparent = m.tr; } fades.splice(i, 1); }
+    const k = f.dir < 0 ? 1 - e : e;
+    for (const m of f.ents) m.m.opacity = m.o0 * k;
+    if (p >= 1) {
+      for (const m of f.ents) { m.m.opacity = m.o0; m.m.transparent = m.tr; }
+      if (f.done) f.done();
+      fades.splice(i, 1);
+    }
   }
   controls.update();
   renderer.render(scene, camera);
@@ -96,6 +103,13 @@ let currentId = null;
 let _frames = 0, _fps = 0, _lastFpsT = performance.now();
 let sceneData = null;
 let fieldHidden = false;               // vector-field toggle state
+// how the base SURFACE is revealed: "surface" = the mesh grows on from its centre (default);
+// "contour" = the surface is dropped and level-set rings bloom outward from the centre. The
+// user switches between the two and back; grow-from-centre is always the default per problem.
+let surfaceMode = "surface";
+let surfaceLayerObj = null;            // the layerObjects entry whose type === "surface"
+let surfaceGroup = null;               // its mesh+wireframe group (grow-from-centre)
+let contourGroup = null;               // the level-set rings (contours-bloom), built lazily, hidden by default
 // how a layer ENTERS: shapes (surfaces, curves) DRAW themselves on; point markers GROW from
 // nothing; the vector field and scalar grids FADE in behind the drawing. Slow and deliberate.
 let drawAnim = [];                     // {geom, count, t0, dur} — geometry revealed by drawRange
@@ -149,9 +163,22 @@ function buildSurface(d) {
       const a = i * nx + j, b = a + 1, c = a + nx, e = c + 1;
       idx.push(a, c, b, b, c, e);
     }
+  // Order the triangles centre-outward so a progressive drawRange reveals the surface
+  // GROWING FROM ITS CENTRE (the default reveal) rather than wiping across row by row.
+  const cx = (d.x[0] + d.x[nx - 1]) / 2, cy = (d.y[0] + d.y[ny - 1]) / 2;
+  const tris = [];
+  for (let t = 0; t < idx.length; t += 3) {
+    const a = idx[t], b = idx[t + 1], c = idx[t + 2];
+    const mx = (pos[3 * a] + pos[3 * b] + pos[3 * c]) / 3 - cx;
+    const my = (pos[3 * a + 1] + pos[3 * b + 1] + pos[3 * c + 1]) / 3 - cy;
+    tris.push([a, b, c, mx * mx + my * my]);
+  }
+  tris.sort((p, q) => p[3] - q[3]);
+  const sortedIdx = [];
+  for (const tr of tris) sortedIdx.push(tr[0], tr[1], tr[2]);
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
-  geo.setIndex(idx);
+  geo.setIndex(sortedIdx);
   geo.computeVertexNormals();
   const mat = new THREE.MeshStandardMaterial({
     vertexColors: true, side: THREE.DoubleSide, roughness: 0.85, metalness: 0.0,
@@ -162,6 +189,55 @@ function buildSurface(d) {
     color: 0x000000, wireframe: true, transparent: true, opacity: 0.08 }));
   const g = new THREE.Group(); g.add(mesh); g.add(wire);
   return g;
+}
+
+// Level-set contours of the same surface, as line segments coloured by height and ordered
+// centre-outward so a progressive drawRange makes the rings BLOOM from the middle. This is
+// the alternate reveal the user can switch to (the surface is dropped for these rings).
+function buildContours(d, levels = 11) {
+  const nx = d.x.length, ny = d.y.length;
+  const zmin = d.z_min, zmax = d.z_max, span = (zmax - zmin) || 1;
+  const cx = (d.x[0] + d.x[nx - 1]) / 2, cy = (d.y[0] + d.y[ny - 1]) / 2;
+  const segs = []; // { a:[x,y,z], b:[x,y,z], t, dist }
+  const mkseg = (a, b, z, t) => {
+    const mx = (a[0] + b[0]) / 2 - cx, my = (a[1] + b[1]) / 2 - cy;
+    return { a: [a[0], a[1], z], b: [b[0], b[1], z], t, dist: mx * mx + my * my };
+  };
+  for (let kk = 1; kk <= levels; kk++) {
+    const level = zmin + (span * kk) / (levels + 1);
+    const t = (level - zmin) / span, z = level * zScale;
+    for (let i = 0; i < ny - 1; i++)
+      for (let j = 0; j < nx - 1; j++) {
+        const z00 = d.z[i][j], z10 = d.z[i][j + 1], z01 = d.z[i + 1][j], z11 = d.z[i + 1][j + 1];
+        const x0 = d.x[j], x1 = d.x[j + 1], y0 = d.y[i], y1 = d.y[i + 1];
+        const cross = (za, zb) => (za < level) !== (zb < level);
+        const lerp = (xa, ya, za, xb, yb, zb) => {
+          const f = (level - za) / (zb - za); return [xa + (xb - xa) * f, ya + (yb - ya) * f];
+        };
+        const pts = [];
+        if (cross(z00, z10)) pts.push(lerp(x0, y0, z00, x1, y0, z10)); // bottom edge
+        if (cross(z10, z11)) pts.push(lerp(x1, y0, z10, x1, y1, z11)); // right edge
+        if (cross(z01, z11)) pts.push(lerp(x0, y1, z01, x1, y1, z11)); // top edge
+        if (cross(z00, z01)) pts.push(lerp(x0, y0, z00, x0, y1, z01)); // left edge
+        if (pts.length === 2) segs.push(mkseg(pts[0], pts[1], z, t));
+        else if (pts.length === 4) { // ambiguous saddle cell — connect the two nearest pairs
+          segs.push(mkseg(pts[0], pts[1], z, t));
+          segs.push(mkseg(pts[2], pts[3], z, t));
+        }
+      }
+  }
+  segs.sort((p, q) => p.dist - q.dist); // centre-outward => rings bloom from the middle
+  const pos = [], col = [];
+  for (const s of segs) {
+    const c = colormap(s.t);
+    pos.push(s.a[0], s.a[1], s.a[2], s.b[0], s.b[1], s.b[2]);
+    col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
+    vertexColors: true, transparent: true, opacity: 0.95 }));
 }
 
 function buildParamSurface(d, color) {
@@ -291,6 +367,8 @@ function buildScene(data) {
   sceneData = data;
   clearContent();
   drawAnim = []; growAnim = []; fades = [];
+  surfaceMode = "surface";              // every new problem starts on grow-from-centre
+  surfaceLayerObj = null; surfaceGroup = null; contourGroup = null;
   zScale = computeZScale(data);
   // reference axes at the origin
   const axes = new THREE.AxesHelper(3.2);
@@ -302,7 +380,14 @@ function buildScene(data) {
     obj.userData.step = layer.step;
     obj.userData.isField = layer.type === "vectors" && FIELD_IDS.has(layer.id);
     contentGroup.add(obj);
-    layerObjects.push({ object: obj, step: layer.step, type: layer.type, wasVisible: false });
+    const entry = { object: obj, step: layer.step, type: layer.type, wasVisible: false };
+    layerObjects.push(entry);
+    if (layer.type === "surface") {
+      surfaceLayerObj = entry; surfaceGroup = obj;
+      contourGroup = buildContours(layer.data);   // its alternate reveal, hidden until chosen
+      contourGroup.visible = false;
+      contentGroup.add(contourGroup);
+    }
   }
   steps = data.steps || [];
   maxStep = layerObjects.reduce((m, l) => Math.max(m, l.step), 0);
@@ -310,17 +395,33 @@ function buildScene(data) {
   frameScene(false); // snap to a good first framing, then let steps ease from here
 }
 
-// fade a (non-curve) layer object in on first reveal; restores material state when done
-function fadeIn(obj) {
+// collect every material under an object, remembering its base opacity + transparent flag
+function materialsOf(obj) {
   const ents = [];
   obj.traverse((o) => {
     if (!o.material) return;
     const arr = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of arr) ents.push({ m, o0: (m.opacity == null ? 1 : m.opacity), tr: m.transparent });
   });
+  return ents;
+}
+
+// fade a (non-curve) layer object in on first reveal; restores material state when done
+function fadeIn(obj) {
+  const ents = materialsOf(obj);
   if (!ents.length) return;
   for (const e of ents) { e.m.transparent = true; e.m.opacity = 0; }
-  fades.push({ ents, t0: performance.now(), dur: FADE_DUR });
+  fades.push({ ents, t0: performance.now(), dur: FADE_DUR, dir: 1 });
+}
+
+// fade an object out, then run done() (used when swapping the surface for its contours);
+// the fade loop restores each material's opacity/transparent when it finishes, so the
+// object draws cleanly at full opacity the next time it is shown
+function fadeOut(obj, done) {
+  const ents = materialsOf(obj);
+  if (!ents.length) { if (done) done(); return; }
+  for (const e of ents) e.m.transparent = true;
+  fades.push({ ents, t0: performance.now(), dur: FADE_DUR, dir: -1, done });
 }
 
 // A shape (surface, mesh, curve) draws itself on: reveal its geometry progressively via
@@ -347,7 +448,9 @@ function triggerGrow(object) {
 // Dispatch a layer's entrance by kind when it is first revealed.
 function revealAnim(l) {
   const t = l.type;
-  if (t === "surface" || t === "param_surface" || t === "polyline" || t === "curve") triggerDraw(l.object);
+  if (t === "surface") { // grows from the centre, or its contours bloom, per the current mode
+    triggerDraw(surfaceMode === "contour" && contourGroup ? contourGroup : l.object);
+  } else if (t === "param_surface" || t === "polyline" || t === "curve") triggerDraw(l.object);
   else if (t === "points") triggerGrow(l.object);
   else fadeIn(l.object); // vectors (the field), scalar_grid, eigenvectors
 }
@@ -404,6 +507,12 @@ function setStep(k) {
     // each layer plays its entrance the moment it is first revealed
     if (vis && !l.wasVisible) revealAnim(l);
     l.wasVisible = vis;
+  }
+  // the base surface shows in exactly ONE representation: the grown mesh, or its contours
+  if (surfaceLayerObj && contourGroup) {
+    const on = surfaceLayerObj.step <= currentStep;
+    if (surfaceMode === "contour") { surfaceGroup.visible = false; contourGroup.visible = on; }
+    else contourGroup.visible = false;
   }
 }
 
@@ -465,6 +574,7 @@ const tracePanel = $("trace-panel");
 const traceToggle = $("trace-toggle");
 const replayBtn = $("replay-btn");
 const fieldToggle = $("field-toggle");
+const contourToggle = $("contour-toggle");
 const tutorCard = $("tutor-card");
 const tutorLabel = $("tutor-label");
 const tutorText = $("tutor-text");
@@ -570,6 +680,13 @@ function newProblem(r) {
   const hasField = (r.scene.layers || []).some((l) => l.type === "vectors" && FIELD_IDS.has(l.id));
   fieldToggle.hidden = !hasField;
   fieldToggle.classList.toggle("on", hasField && !fieldHidden);
+  // the surface⇄contours switch appears only when there's a surface to reveal; reset to the
+  // grow-from-centre default for each new problem
+  const hasSurface = (r.scene.layers || []).some((l) => l.type === "surface");
+  contourToggle.hidden = !hasSurface;
+  contourToggle.classList.remove("on");
+  const clbl = contourToggle.querySelector(".label");
+  if (clbl) clbl.textContent = "Contours";
   goBeat(0);
 }
 
@@ -641,6 +758,25 @@ fieldToggle.onclick = () => {
   fieldHidden = !fieldHidden;
   fieldToggle.classList.toggle("on", !fieldHidden);
   setStep(currentStep);
+};
+
+// switch the base surface between growing-from-centre and its contours-bloom, and back.
+// Grow-from-centre is the default; clicking drops the surface (fades it out) and blooms the
+// contour rings; clicking again fades the rings out and grows the surface back on.
+contourToggle.onclick = () => {
+  if (!surfaceGroup || !contourGroup) return;
+  const toContour = surfaceMode !== "contour";
+  surfaceMode = toContour ? "contour" : "surface";
+  if (toContour) {
+    fadeOut(surfaceGroup, () => { surfaceGroup.visible = false; });
+    contourGroup.visible = true; triggerDraw(contourGroup);      // rings bloom from the centre
+  } else {
+    fadeOut(contourGroup, () => { contourGroup.visible = false; });
+    surfaceGroup.visible = true; triggerDraw(surfaceGroup);      // mesh grows back from the centre
+  }
+  contourToggle.classList.toggle("on", toContour);
+  const lbl = contourToggle.querySelector(".label");
+  if (lbl) lbl.textContent = toContour ? "Surface" : "Contours";
 };
 
 traceToggle.onclick = () => {

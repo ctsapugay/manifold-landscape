@@ -41,6 +41,12 @@
         <svg viewBox="0 0 24 24" width="15" height="15"><path d="M8 6h11" /><path d="M8 12h11" /><path d="M8 18h11" /><circle cx="3.5" cy="6" r="1.4" /><circle cx="3.5" cy="12" r="1.4" /><circle cx="3.5" cy="18" r="1.4" /></svg>
         <span>Tool calls</span>
       </button>
+      <!-- surface reveal toggle: grow-from-centre (default) ⇄ contours bloom -->
+      <button id="contour-toggle" class="chip" hidden title="Switch between the surface and its contour lines">
+        <svg viewBox="0 0 24 24" width="15" height="15"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5.2" /><circle cx="12" cy="12" r="1.6" /></svg>
+        <span class="label">Contours</span>
+        <span id="contour-switch" class="switch"><span class="knob"></span></span>
+      </button>
     </div>
     <div id="trace-panel" hidden></div>
 

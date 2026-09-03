@@ -38,7 +38,7 @@ canvas { display: block; }
     radial-gradient(1400px 900px at 50% 58%, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.55) 100%);
 }
 /* every overlay sits above the canvas */
-#wordmark, #topbar, #trace-panel, #thinking, #field-toggle,
+#wordmark, #topbar, #trace-panel, #thinking, #field-toggle, #contour-toggle,
 #tutor-card, #results-panel, #chatbar, #hud, #error { z-index: 3; }
 
 /* ---------------- wordmark ---------------- */
@@ -84,6 +84,7 @@ canvas { display: block; }
 .chip.on .switch .knob { left: 17px; }
 .chip.on svg { stroke: var(--accent); }
 #field-toggle { position: absolute; left: 28px; bottom: 34px; }
+/* #contour-toggle lives in the top-right #topbar (flex row) alongside Replay / Tool calls */
 
 /* ---------------- trace panel ---------------- */
 #trace-panel {

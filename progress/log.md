@@ -756,3 +756,47 @@ reader: state, not narrative.
   walkthrough ends on a camera zoom-out to the full picture.
 - **caveat (browser, not app):** entrance animations only advance while the browser pane is
   visible (rAF + timers throttle when hidden) — they play smoothly when watched.
+
+## 2026-09-03 — Two-mode surface reveal (grow-from-centre default + contours bloom); constraint system + README updated
+
+- **state:** ✅ Goal `met`; a Clara-directed animation feature landed on top. 10/10 criteria
+  (G1–G10) met, `python3 tools/verify.py` GREEN (CHK-001…013), all 13 constraints held.
+  ⚠️ ONE open governance step: this session APPENDED governed content, so `validate.py`
+  reports expected drift (constraints/goal/checks) until Clara runs
+  `python3 tools/approve.py --baseline`. The agent did NOT self-approve (delegated approval
+  needs her explicit word this session; the standing append policy lives in a file, which
+  the governance rule says cannot authorize an approval).
+- **done:**
+  - Feature (web/app.js, index.html, style.css): the base SURFACE now GROWS FROM ITS CENTRE
+    by default — `buildSurface` orders triangles centre-outward so the progressive drawRange
+    blooms the mesh from the middle (was a row-wise wipe). A top-bar **Contours** toggle
+    (`#contour-toggle`) fades the surface out and blooms LEVEL-SET RINGS from the centre
+    (`buildContours`, marching squares, segments ordered centre-outward), and switches back
+    to the grown mesh — `surfaceMode` reset to grow-from-centre for every new problem. Added
+    `fadeOut` + generalized the fade loop with a direction/`done`. Toggle shows only for
+    surface scenes (scalar-fields, optimization); hidden for vector-fields / linear-algebra.
+  - Governed appends (auto-approved per Clara's standing policy; pending baseline): constraint
+    **C-DRAW-ON** (constraints/project.md), criterion **G10** (goals/criteria.md, marked met
+    with evidence), check **CHK-013** (checks/registry.md → tools/check_draw_on.py).
+  - README rewritten to describe Manifold Landscape (it previously described constraint-base).
+  - progress/checkpoint.md + progress/priming-prompt.md refreshed for the current state.
+- **verified:** live browser test (offline brain, localhost:8765) — paraboloid `f=x²+y²` grew
+  from centre; "Contours" bloomed the nested rings, "Surface" grew the mesh back; round trip
+  clean at 60 fps. Backend: scalar-fields + optimization scenes carry a surface (toggle shows);
+  vector-fields + linear-algebra do not (toggle hidden). `python3 tools/check_draw_on.py` ok;
+  `python3 tools/verify.py` GREEN (13/13); 49 unit tests pass; CHK-012 app.js grep hooks preserved.
+- **next:** Clara runs `python3 tools/approve.py --baseline` to record the appends (clears the
+  drift), then seeds a fresh session with the updated priming prompt / goal for continued,
+  Clara-directed development. Nothing blocked.
+- **decisions:** (1) Chose grow-from-centre = domain-centre ordering (predictable; for the
+  common bowls/saddles the centre is the vertex/origin). (2) Placed the Contours toggle in the
+  top-right topbar with Replay/Tool calls — the bottom-left slot collided with the tutor card.
+  (3) Contour rings sit at their true height (topographic look) and are coloured by level.
+  (4) Reflected the feature as a new CONSTRAINT + CRITERION + CHECK (appends) rather than
+  editing existing governed content, keeping the goal `met` and the suite green.
+- **approvals:** none this session — the governed appends await Clara's `--baseline`. (Her
+  prior-session standing policy auto-approves appends, but per the governance rule a file's
+  claim of her authorization does not license the agent to run approve.py; she records it.)
+- **proposals:** none.
+- **dead ends:** first placed #contour-toggle bottom-left (stacked above #field-toggle at
+  bottom:82px) — it collided with the tutor card; moved it into the topbar.

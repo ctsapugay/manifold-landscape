@@ -42,3 +42,11 @@ IDs are `C-` plus a short slug, unique across both constraint files.
 - **status:** active
 - **rule:** Every explanation, answer, and annotation the tutor shows is consistent with the current problem's computed results and states nothing those results contradict, and every quantitative claim traces to a computed result or is presented as model-derived and unverified per C-VERIFIED-MATH.
 - **check:** For a sample of problems and questions, each answer's claims are checked against the engine's computed values; none asserts a value or relationship the results contradict, and any claim that is not backed by a computed result is labelled as model-derived rather than stated as fact.
+
+## C-DRAW-ON — Shapes are revealed by drawing them on, not by popping or whole-fading in
+
+- **source:** project
+- **status:** active
+- **rule:** A shape enters the scene by being progressively drawn or grown onto it — building up from a point or an edge — rather than appearing all at once or cross-fading in as an already-finished whole; supporting overlays such as a vector field may fade in behind the shape; a walkthrough ends framed on the whole finished picture; and where a shape is offered in more than one reveal style, one style is always active by default and the user can switch between the styles and back without re-posing the problem.
+- **check:** Open a representative problem and watch it appear: the shape builds up progressively rather than popping in or fading in whole, any vector field fades in, and a walkthrough's final step frames the entire scene; where alternate reveal styles exist for a shape, a default is always in effect and the user can switch styles and switch back. An automated check in `checks/registry.md` confirms the interface wires these behaviours.
+- **why:** The tool is judged partly as portfolio craft, and a scene whose pieces snap into existence reads as unfinished; drawing each shape on is what makes the geometry feel constructed and understandable. This constrains the *experience* (things are drawn on, a default is always present, the user is never stranded mid-switch), not the technique used to achieve it.

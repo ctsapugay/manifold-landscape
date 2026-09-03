@@ -57,21 +57,25 @@ plus an interactive 3D visual you can manipulate; the step-by-step walkthrough i
 when the user asks for it, it TUTORS, building the visual in sync and driving it to point at
 what matters, and it answers questions at any step, grounded in the computed state.
 
-IMPORTANT — this is an EXPANSION of a shipped foundation, not a greenfield build. The
-deterministic engine for the first four areas (engine/), a basic 3D web app (web/), a
-template-based Q&A, tests, and a check battery ALREADY EXIST on main and pass. Your job is
-to build the AGENTIC TUTOR on top: arbitrary problem intake, the tool-orchestrating agent,
-the fifth area (dynamical systems / ODEs), an OPTIONAL step-by-step walkthrough (default =
-answer + visual) in which the tutor drives the visuals, multi-turn grounded chat, an
-agent-tool-call transparency toggle, and a "thinking" indicator. When you hit a math gap the
-tools can't close, BUILD a deterministic tool for it (or generate + execute + verify code)
-rather than letting the model compute the answer — model math is a genuine last resort and
-must be labelled model-derived. The agent calls the Anthropic (Claude) API — set up your key
-from .env.example → .env (gitignored; never commit it). See goals/ for the full finish line.
+IMPORTANT — the core is BUILT and WORKING, not a greenfield build. On main and passing:
+the deterministic engine for all five areas (engine/), the interactive 3D web app (web/),
+the tool-orchestrating AI agent (agent/, live Claude path + offline fallback), multi-turn
+grounded chat, the transparency toggle and thinking indicator, and the draw-on animation
+system — shapes DRAW/GROW themselves on (surfaces grow from the centre by default, with a
+top-bar toggle that blooms level-set CONTOURS from the centre and back), the vector field
+fades in, and a walkthrough ends framed on the whole picture. All ten criteria (G1–G10) are
+MET with evidence and python3 tools/verify.py is GREEN (CHK-001…013); the goal condition is
+`met`. When you hit a math gap the tools can't close, BUILD a deterministic tool for it (or
+generate + execute + verify code) rather than letting the model compute the answer — model
+math is a last resort and must be labelled model-derived (C-VERIFIED-MATH). The agent calls
+the Anthropic (Claude) API — key lives in .env (gitignored; never commit it); the LIVE path
+runs from the isolated venv (./.venv/bin/python web/server.py), the offline engine + all
+checks run on base python3. Continued development is Clara-directed — she hands you the next
+goal. See goals/ for the finish line and progress/checkpoint.md for exactly where things stand.
 
 When you have done all four steps, briefly confirm you understand the system and the
 project, and report the current checkpoint and any open blockers. Then wait — I will seed
-goal mode with the goal condition next (via /goal). Do not start work until then.
+goal mode with the next goal (via /goal). Do not start work until then.
 ```
 
 ## Step 2 — seed goal mode
@@ -123,19 +127,22 @@ goals/criteria.md (python3 tools/brief.py --goal prints them live). In brief:
   G8  Polished, unbroken end-to-end flow across the test set (pose → interpret → solve →
       visualize → step → chat).
   G9  Scope + future expansions documented (five areas; deferred PDEs, physics, 4D+).
+  G10 Shapes are DRAWN ON — each shape builds up progressively (not a pop or whole-fade),
+      the field fades in, a walkthrough ends framed on the whole picture; a surface grows
+      from its CENTRE by default and the user can switch it to a CONTOUR bloom and back.
 
-Foundation already on main: engine/ (deterministic tools for the first four areas), web/
-(basic 3D app), template Q&A, tests/, CHK-001…007. Build the agentic tutor ON TOP; reuse the
-tools. When a gap can't be closed by an existing tool, BUILD one (or generate + execute +
-verify code) rather than letting the model compute the answer — model math is a last resort,
-always labelled model-derived. Dynamical systems (ODEs) reuse the vector-field + linear-
-algebra engine (flow field,
-integrate trajectories, fixed points where F=0, stability via Jacobian eigenvalues, chaos via
-Lorenz-type attractors). Set up your Anthropic API key from .env.example → .env (never commit
-.env — C-SECRETS). Register new checks as you build (governed additions — propose them) and
-revise CHK-004/005/006 for the agentic layer + five areas; keep the foundation checks green.
-Test-set rule: you may ADD problems freely, but removing/weakening a protected-core problem
-needs Clara's approval.
+On main and complete: engine/ (deterministic tools for all five areas), web/ (the
+interactive 3D app + draw-on animation system), agent/ (the tool-orchestrating agent, live
+Claude path + offline fallback), tests/, and CHK-001…013 — all green, goal `met`. This goal
+is DONE; a fresh session is for the NEXT goal Clara defines, or for maintenance that keeps
+G1–G10 true and verify.py green. When a math gap can't be closed by an existing tool, BUILD
+one (or generate + execute + verify code) rather than letting the model compute the answer —
+model math is a last resort, always labelled model-derived. The Anthropic API key lives in
+.env (never commit it — C-SECRETS); run the LIVE app from the venv (./.venv/bin/python
+web/server.py), run checks on base python3. Register new checks as you build (appends are
+auto-approved per Clara's standing policy; editing/removing an existing check or constraint
+needs her sign-off). Test-set rule: you may ADD problems freely, but removing/weakening a
+protected-core problem needs Clara's approval.
 
 Start from progress/checkpoint.md's "next". Re-ground with python3 tools/brief.py as you go.
 Keep working across unblocked fronts; stop only when blocked on all fronts or when a decision

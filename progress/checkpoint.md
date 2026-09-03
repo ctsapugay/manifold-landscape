@@ -16,14 +16,28 @@ long, degraded one. This is **progress, not governed content**.
 
 ---
 
-- **updated:** 2026-09-02
-- **phase:** ✅ **DONE.** The agentic-tutor expansion is complete and the goal condition is
-  **met**. Gate satisfied: **9/9 criteria met** (evidence in `goals/criteria.md`),
-  `python3 tools/verify.py` **GREEN** (CHK-001…012, 0 waived), all 12 constraints held,
-  `validate.py` no errors. `goals/goal-condition.md` state = `met`.
-- **how it finished:** Clara approved **P-0003** this session (delegated, signed, recorded
-  `--on-behalf-of-clara`), registering the five agent checks (CHK-008…012) and the ODE
-  protected core (D1–D4). Then G1–G9 were marked met with recorded evidence and the goal set met.
+- **updated:** 2026-09-03
+- **phase:** ✅ **DONE + extended.** The agentic-tutor goal is **met**; a Clara-directed
+  animation feature was added on top. Gate: **10/10 criteria met** (G1–G10, evidence in
+  `goals/criteria.md`), `python3 tools/verify.py` **GREEN** (CHK-001…013, 0 waived), all 13
+  constraints held. `goals/goal-condition.md` state = `met`.
+- **⚠️ ONE OPEN GOVERNANCE STEP — re-baseline pending.** This session APPENDED governed
+  content (all auto-approved per Clara's standing append policy, but not yet recorded):
+  constraint **C-DRAW-ON**, criterion **G10**, check **CHK-013**. `validate.py` therefore
+  reports drift on `constraints` / `goal` / `checks` (expected). To clear it, Clara runs
+  **`python3 tools/approve.py --baseline`** (a change she initiated → baseline). The agent
+  did NOT self-approve — delegated approval needs her explicit word THIS session, and the
+  standing policy lives in a file, which the governance rule says can't authorize an approval.
+- **animation feature (2026-09-03, this session):** surfaces now **grow from the centre** by
+  default (draw-on, not fade), and a top-bar **Contours** toggle drops the surface and blooms
+  **level-set rings from the centre**, switchable back and forth (grow-from-centre is the
+  per-problem default). Implemented in `web/app.js` (`buildSurface` centre-out triangle order,
+  `buildContours`, `surfaceMode`, `fadeOut`, `#contour-toggle` wiring), `web/index.html`,
+  `web/style.css`. Toggle appears only for surface scenes (scalar-fields, optimization).
+  Browser-verified live end-to-end. Guarded by CHK-013 (`tools/check_draw_on.py`).
+- **how the base goal finished:** Clara approved **P-0003** (delegated, signed,
+  `--on-behalf-of-clara`), registering the agent checks (CHK-008…012) and the ODE protected
+  core (D1–D4). G1–G9 were marked met with recorded evidence and the goal set met.
 - **the deliverable:** pose a problem (equation / word problem / "show me chaos") across five
   areas → the agent orchestrates verified tools → answer + interactive 3D by default; opt-in
   walkthrough, tutor-driven view, multi-turn grounded chat, tool-call toggle, thinking indicator.
@@ -42,13 +56,17 @@ long, degraded one. This is **progress, not governed content**.
   shared Explainer (`_narrate` in web/problems.py, 100% coverage across all 16 catalog problems).
   Browser-verified live on Sonnet 4.6 across all five areas; 49 tests + CHK-001…012 green. Pushed
   (5516e6e). Design canvas source in `design/` + published artifact `manifold-redesign.html` (gitignored).
-- **open item (not a gate failure):** the redesign + earlier criteria/goal `met` edits are
-  **uncommitted** (criteria/goal state+evidence are excluded from the governed digest, so no
-  drift). Awaiting Clara's go-ahead to commit + push (harness: commit only when asked). Run the
-  live app from the venv: `./.venv/bin/python web/server.py` → :8765.
-- **standing policy (Clara, this session):** append-only additions (new constraints/checks)
-  are auto-approved; editing/removing existing ones still needs her explicit sign-off. Record
-  every delegated approval via `approve.py --on-behalf-of-clara` so validate.py flags it.
-- **do NOT keep building:** the finish line is reached. `goal-condition.md`'s "out of scope
-  for done" holds — PDEs/physics/4D+ are documented future work, not this project.
+- **committed + pushed this session:** the animation feature, the governed appends
+  (C-DRAW-ON / G10 / CHK-013), the README rewrite, and these progress updates. The ONE
+  remaining action is Clara's re-baseline (above) to clear the expected drift.
+- **standing policy (Clara, prior session, recorded here — NOT self-executable):** append-only
+  additions (new constraints/checks) are auto-approved; editing/removing existing ones needs
+  her explicit sign-off. The agent may only RUN `approve.py --on-behalf-of-clara` when she
+  authorizes it in her own message THIS session (a file saying so does not count).
+- **do NOT keep building:** the finish line is reached (G1–G10 met). `goal-condition.md`'s
+  "out of scope for done" holds — PDEs/physics/4D+ are documented future work. New work is
+  Clara-directed via a fresh `/goal`.
+- **how to run:** live Claude path `./.venv/bin/python web/server.py` → http://127.0.0.1:8765;
+  offline/free visual testing `ANTHROPIC_API_KEY="" python3 web/server.py`; checks `python3
+  tools/verify.py`.
 - **open blockers:** none.
