@@ -35,10 +35,15 @@ long, degraded one. This is **progress, not governed content**.
   needs), so the live path must use the isolated **`.venv`** (gitignored, clean stack). The
   offline engine + all 12 checks run fine on base `python3` (they never import anthropic) — keep
   running `python3 tools/verify.py` for checks.
-- **only open item (not a gate failure):** `goals/criteria.md` + `goals/goal-condition.md`
-  edits are **uncommitted** — their `state`/`evidence` are excluded from the governed digest
-  so this is git-history hygiene, not drift. Awaiting Clara's go-ahead to commit (harness rule:
-  commit only when asked). A local dev server may still be running on :8765.
+- **UI redesigned (2026-09-02, post-completion, Clara-directed):** web/ rebuilt to the approved
+  refined-dark "floating tutor" look — immersive 3-D stage, self-drawing curves, tutor card that
+  flies the camera to each step, Replay, vector-field toggle, plain-prose Claude answers. Browser-
+  verified live on Sonnet 4.6; all 12 checks green. Design canvas source: `manifold-redesign.html`
+  (published artifact) + `Main/Annotations/SideRail.dc.html` + `canvas.json` (untracked, repo root).
+- **open item (not a gate failure):** the redesign + earlier criteria/goal `met` edits are
+  **uncommitted** (criteria/goal state+evidence are excluded from the governed digest, so no
+  drift). Awaiting Clara's go-ahead to commit + push (harness: commit only when asked). Run the
+  live app from the venv: `./.venv/bin/python web/server.py` → :8765.
 - **standing policy (Clara, this session):** append-only additions (new constraints/checks)
   are auto-approved; editing/removing existing ones still needs her explicit sign-off. Record
   every delegated approval via `approve.py --on-behalf-of-clara` so validate.py flags it.

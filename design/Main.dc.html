@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+    a { color: #4fd6c9; } a:hover { color: #7ee6db; }
+    @keyframes drawA { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
+    @keyframes drawB { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
+    @keyframes pulse { 0%,100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.55); opacity: .12; } }
+    @keyframes breathe { 0%,100% { opacity: .5; } 50% { opacity: .8; } }
+    .cam { transition: transform .7s cubic-bezier(.4,0,.2,1); transform-origin: 0 0; }
+    .field { transition: opacity .45s ease; }
+    .ring { transform-box: fill-box; transform-origin: center; animation: pulse 2.4s ease-in-out infinite;
+      transition: cx .5s cubic-bezier(.4,0,.2,1), cy .5s cubic-bezier(.4,0,.2,1); }
+    .dot { transition: cx .5s cubic-bezier(.4,0,.2,1), cy .5s cubic-bezier(.4,0,.2,1); }
+    .card { transition: left .55s cubic-bezier(.4,0,.2,1), top .55s cubic-bezier(.4,0,.2,1); }
+    .knob { transition: left .25s cubic-bezier(.4,0,.2,1); }
+  </style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; background:
+     radial-gradient(1100px 720px at 50% 42%, #10202a 0%, #0a1015 46%, #06080c 100%);
+     overflow: hidden; color: #e9eff5;">
+
+  <div style="position: absolute; width: 760px; height: 760px; left: 340px; top: 90px;
+       background: radial-gradient(circle, rgba(79,214,201,0.14), rgba(79,214,201,0) 62%);
+       filter: blur(14px); animation: breathe 9s ease-in-out infinite;"></div>
+  <div style="position: absolute; inset: 0; background:
+       radial-gradient(1400px 900px at 50% 55%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.6) 100%);"></div>
+
+  <div style="position: absolute; left: 44px; top: 40px; display: flex; align-items: center; gap: 10px; z-index: 5;">
+    <div style="width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid {{accent}};
+         display: flex; align-items: center; justify-content: center;">
+      <div style="width: 7px; height: 7px; border-radius: 999px; background: {{accent}};"></div>
+    </div>
+    <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px;
+         letter-spacing: 0.14em; text-transform: uppercase; color: #cdd7e0;">Manifold</div>
+  </div>
+
+  <div onClick="{{replay}}" style="position: absolute; right: 44px; top: 38px; z-index: 5; cursor: pointer;
+       display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 12px; border-radius: 999px;
+       background: rgba(18,26,33,0.7); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px);">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c3ccd6" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v5h5"/></svg>
+    <span style="font-family: 'Space Grotesk', sans-serif; font-size: 12px; letter-spacing: 0.06em; color: #c3ccd6;">Replay</span>
+  </div>
+
+  <!-- the visual (camera pans/zooms this whole layer) -->
+  <svg viewBox="0 0 1000 680" width="900" class="cam" style="position: absolute; left: 270px; top: 120px;
+       overflow: visible; transform: {{tf}};">
+    <defs>
+      <linearGradient id="mstroke" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7c4dff"/>
+        <stop offset="0.4" stop-color="#2f8fb3"/>
+        <stop offset="0.72" stop-color="{{accent}}"/>
+        <stop offset="1" stop-color="#f4e08a"/>
+      </linearGradient>
+      <filter id="mglow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="4" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- vector field (toggle) -->
+    <g class="field" style="opacity: {{fieldOpacity}};">
+      <sc-for list="{{arrows}}" as="a" hint-placeholder-count="40">
+        <line x1="{{a.x1}}" y1="{{a.y1}}" x2="{{a.x2}}" y2="{{a.y2}}" stroke="#7fd6e0" stroke-width="0.9"
+          stroke-linecap="round" opacity="0.5"/>
+      </sc-for>
+      <sc-for list="{{arrows}}" as="a" hint-placeholder-count="40">
+        <circle cx="{{a.x2}}" cy="{{a.y2}}" r="1.5" fill="#a7e6ee" opacity="0.7"/>
+      </sc-for>
+    </g>
+
+    <path d="{{lorenz}}" pathLength="1000" fill="none" stroke="url(#mstroke)" stroke-width="1.4"
+      stroke-linecap="round" filter="url(#mglow)" opacity="0.92"
+      style="stroke-dasharray: 1000; animation: {{anim}} 4.8s cubic-bezier(.4,0,.1,1) forwards;"></path>
+    <circle class="ring" cx="{{hx}}" cy="{{hy}}" r="15" fill="none" stroke="#ffc76b" stroke-width="1.4"/>
+    <circle class="dot" cx="{{hx}}" cy="{{hy}}" r="4" fill="#ffc76b"/>
+  </svg>
+
+  <!-- moving callout -->
+  <div class="card" style="position: absolute; left: {{cardLeft}}px; top: {{cardTop}}px; width: 322px; z-index: 4;
+       padding: 16px 18px 13px; border-radius: 15px; background: rgba(18,26,33,0.86);
+       border: 1px solid rgba(255,199,107,0.28); backdrop-filter: blur(16px); box-shadow: 0 16px 44px rgba(0,0,0,0.5);">
+    <div style="font-family: 'Space Grotesk', sans-serif; font-size: 10px; font-weight: 600;
+         letter-spacing: 0.16em; text-transform: uppercase; color: #ffc76b; margin-bottom: 8px;">{{label}}</div>
+    <div style="font-size: 15.5px; line-height: 1.5; color: #eaf1f7; text-wrap: pretty; min-height: 46px;">{{beat}}</div>
+    <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
+      <div onClick="{{prev}}" style="width: 28px; height: 28px; border-radius: 999px; cursor: pointer;
+           display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.12);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c3ccd6" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <sc-for list="{{dots}}" as="d" hint-placeholder-count="4">
+          <span style="width: 6px; height: 6px; border-radius: 999px; background: {{d.bg}}; transition: background .2s;"></span>
+        </sc-for>
+      </div>
+      <div onClick="{{next}}" style="width: 28px; height: 28px; border-radius: 999px; cursor: pointer;
+           display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,199,107,0.4);
+           background: rgba(255,199,107,0.12);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffc76b" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <span style="flex: 1;"></span>
+      <sc-if value="{{verified}}" hint-placeholder-val="{{ true }}">
+        <span style="display: inline-flex; align-items: center; gap: 4px; font-family: 'IBM Plex Mono', monospace;
+             font-size: 10px; color: #ffc76b;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffc76b" stroke-width="3"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>verified
+        </span>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- vector-field toggle -->
+  <div onClick="{{toggleField}}" style="position: absolute; left: 44px; bottom: 46px; z-index: 4; cursor: pointer;
+       display: flex; align-items: center; gap: 11px; padding: 9px 14px; border-radius: 999px;
+       background: rgba(18,26,33,0.78); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(14px);">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{fieldStroke}}" stroke-width="1.7"
+         stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h6M4 8l2-2M4 8l2 2"/><path d="M14 16h6M20 16l-2-2M20 16l-2 2"/><path d="M6 17l4-4M14 11l4-4" opacity="0.55"/></svg>
+    <span style="font-size: 13px; color: #c8d1da;">Vector field</span>
+    <div style="position: relative; width: 34px; height: 19px; border-radius: 999px; background: {{trackBg}}; transition: background .25s;">
+      <div class="knob" style="position: absolute; top: 2px; left: {{knobLeft}}; width: 15px; height: 15px;
+           border-radius: 999px; background: #f2f6fa; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>
+    </div>
+  </div>
+
+  <!-- chat bar -->
+  <div style="position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); width: 560px; z-index: 4;
+       display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 18px;
+       border-radius: 999px; background: rgba(14,20,26,0.82); border: 1px solid rgba(255,255,255,0.1);
+       backdrop-filter: blur(16px); box-shadow: 0 14px 40px rgba(0,0,0,0.45);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7682" stroke-width="1.6"
+         stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.3L19 10l-5.1 1.7L12 17l-1.9-5.3L5 10l5.1-1.7z"/></svg>
+    <div style="flex: 1; font-size: 16px; color: #6b7682;">Ask about this attractor&hellip;</div>
+    <div style="width: 44px; height: 44px; border-radius: 999px; background: {{accent}}; cursor: pointer;
+         display: flex; align-items: center; justify-content: center; box-shadow: 0 0 22px rgba(79,214,201,0.4);">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#06110f" stroke-width="2.2"
+           stroke-linecap="round" stroke-linejoin="round"><path d="M7 11l5-5 5 5"/><path d="M12 6v13"/></svg>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#4fd6c9","options":["#4fd6c9","#8b7cff","#ffb454","#5aa2ff"]}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { i: 0, play: 0, field: 0 }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#4fd6c9';
+    const lorenz = "M496 625 C498 625 500 625 506 625 C513 624 521 625 536 621 C552 617 569 617 598 602 C628 586 667 574 713 528 C758 481 836 397 873 323 C910 249 953 121 935 86 C917 51 830 89 767 112 C703 135 611 194 554 223 C497 252 456 270 423 286 C390 302 373 310 356 318 C339 326 331 331 321 334 C310 338 303 340 295 340 C287 340 280 337 272 334 C265 331 258 325 252 320 C247 314 242 307 240 302 C238 296 238 291 240 288 C242 286 248 285 253 286 C258 288 266 291 272 295 C279 299 285 305 290 310 C295 316 299 322 300 326 C302 331 302 336 301 339 C299 342 296 344 292 344 C287 344 281 343 275 340 C269 337 262 332 256 327 C250 321 244 314 240 308 C237 302 235 294 236 291 C237 287 241 284 246 284 C251 284 259 287 265 290 C272 293 280 299 286 304 C292 310 297 316 300 322 C303 327 304 332 304 336 C304 340 301 344 298 345 C294 346 288 347 283 345 C277 343 269 339 262 334 C256 329 248 321 243 315 C239 308 235 300 234 295 C233 289 235 285 239 283 C243 281 251 282 257 285 C264 287 273 293 280 298 C287 303 293 310 298 316 C302 322 305 328 306 333 C307 338 306 342 303 345 C301 347 296 349 290 348 C285 347 277 345 270 341 C263 337 255 330 249 323 C242 316 236 307 234 301 C231 294 231 287 233 284 C236 280 242 279 249 281 C255 282 265 286 272 291 C280 296 288 303 294 309 C300 315 304 322 307 328 C309 334 310 339 308 343 C307 347 303 350 298 350 C293 351 286 350 279 347 C272 344 263 339 256 332 C249 326 240 316 236 309 C232 301 228 292 229 287 C230 282 234 278 240 278 C245 277 255 280 263 284 C271 288 281 295 288 301 C295 307 302 315 306 322 C310 328 312 335 312 340 C312 344 309 349 306 351 C302 353 296 354 289 352 C282 351 273 347 265 341 C257 336 247 327 241 319 C235 311 229 301 227 294 C226 287 227 280 231 277 C235 275 244 275 252 278 C260 280 271 287 280 293 C288 299 297 307 302 314 C308 321 312 328 314 334 C315 340 315 346 312 350 C310 353 305 356 299 356 C293 356 284 354 276 350 C268 346 257 338 249 331 C241 323 233 312 229 303 C224 295 222 285 224 280 C226 275 233 272 240 273 C248 274 259 278 269 284 C278 289 289 297 296 305 C304 312 310 320 314 327 C317 334 318 341 318 346 C317 351 313 356 309 357 C304 359 296 360 288 357 C280 355 270 350 261 343 C252 336 241 325 234 316 C227 306 221 294 221 287 C220 279 223 273 229 271 C235 269 246 271 255 275 C265 279 277 287 287 294 C296 301 305 310 310 318 C316 326 320 334 321 341 C322 347 321 353 317 357 C314 360 308 363 301 362 C294 362 284 359 274 354 C265 349 253 340 244 331 C235 321 225 308 221 298 C217 289 216 278 219 273 C222 268 231 266 240 268 C249 269 263 276 273 282 C284 289 296 298 304 307 C312 315 318 324 322 332 C325 340 326 347 325 353 C323 358 319 363 313 365 C308 366 299 367 290 364 C281 361 269 355 258 346 C248 338 235 326 228 315 C220 304 214 290 213 281 C213 273 217 266 224 264 C231 262 245 266 256 271 C267 276 282 285 292 293 C302 302 312 312 318 321 C325 330 328 339 329 346 C331 353 329 359 325 363 C321 367 314 370 306 370 C298 370 287 367 276 361 C265 355 252 345 241 335 C231 324 220 308 215 297 C210 286 208 273 211 267 C215 261 225 259 236 261 C246 263 263 271 275 278 C287 286 301 297 310 306 C319 316 326 326 330 335 C334 343 335 352 334 358 C333 364 328 370 322 372 C316 375 307 376 297 373 C286 370 273 364 261 355 C249 346 234 332 225 320 C216 307 207 290 205 279 C203 269 208 259 215 257 C223 254 238 258 252 263 C265 268 282 279 294 289 C306 298 318 310 325 320 C333 330 337 340 339 348 C341 357 340 364 336 369 C333 375 326 379 318 380 C309 380 298 379 286 373 C273 368 258 358 245 347 C233 335 218 317 210 303 C203 289 198 272 200 263 C202 255 213 250 224 251 C236 252 254 260 269 269 C284 277 300 289 312 300 C323 311 332 323 338 333 C344 343 346 353 346 361 C346 368 343 375 337 380 C331 384 323 387 312 386 C302 385 288 381 274 373 C261 365 243 351 231 337 C218 323 204 302 198 287 C193 273 193 257 199 251 C205 245 221 245 235 249 C250 254 271 265 286 276 C301 286 317 299 327 311 C338 322 345 334 349 345 C354 355 354 364 352 372 C350 379 346 386 338 389 C331 392 320 394 308 392 C296 389 280 383 265 372 C250 362 231 345 218 328 C205 312 191 288 188 273 C185 259 189 245 199 241 C208 237 229 242 246 249 C263 256 285 270 301 282 C317 294 331 308 341 320 C351 332 357 344 360 355 C363 365 362 374 359 382 C356 389 350 396 342 398 C333 401 321 403 308 399 C294 395 276 388 260 375 C243 363 222 343 209 324 C195 306 181 279 179 263 C177 248 185 235 197 233 C209 230 233 238 252 247 C271 256 295 272 312 285 C328 298 343 313 353 326 C362 338 368 351 371 362 C373 372 372 382 369 390 C365 398 359 405 350 408 C341 411 329 413 314 410 C300 406 281 399 263 386 C245 373 221 351 206 330 C190 310 173 279 170 261 C167 243 174 228 188 224 C201 221 228 230 249 240 C270 249 297 267 316 281 C334 296 350 312 361 325 C373 339 379 353 382 364 C386 376 385 387 383 395 C380 404 375 412 366 417 C358 422 347 426 333 424 C319 423 301 419 281 408 C262 397 237 378 217 356 C198 334 174 299 165 276 C157 253 156 227 166 218 C176 209 204 214 227 222 C250 230 282 250 305 266 C328 281 349 299 363 314 C378 330 387 344 394 358 C400 371 402 383 402 394 C401 405 398 414 393 422 C387 430 380 437 368 440 C357 443 344 445 326 441 C309 436 286 429 263 412 C240 395 209 367 189 339 C169 311 145 266 142 243 C138 219 150 200 169 197 C187 194 226 212 255 225 C283 239 317 262 340 280 C363 297 381 315 395 331 C408 347 415 362 420 375 C426 388 427 400 426 412 C426 423 424 433 419 441 C415 450 409 458 400 463 C391 469 380 474 365 474 C350 473 331 473 308 462 C285 450 254 434 226 406 C198 378 158 330 141 293 C123 257 109 206 119 188 C128 170 165 175 197 184 C230 193 279 223 312 243 C345 264 375 286 397 305 C419 324 432 340 443 356 C454 371 459 385 465 397 C470 410 472 422 474 433 C477 444 478 454 480 463 C482 472 483 481 486 488 C488 496 490 503 494 510 C498 516 502 522 508 527 C515 531 522 536 534 538 C546 539 559 542 579 537 C600 532 625 528 657 505 C689 483 736 450 772 403 C808 355 862 267 874 220 C886 174 873 129 842 123 C811 117 737 160 682 187 C633 211 580 245 543 268 C507 291 483 309 462 326 C440 340 431 353 419 367 C407 380 400 390 390 398 C380 406 371 413 359 416 C346 419 333 421 316 417 C300 412 279 404 259 390 C240 375 214 350 198 327 C181 304 164 270 162 252 C160 233 170 219 186 216 C201 214 232 227 255 238 C279 249 306 268 326 284 C346 299 361 316 372 330 C384 344 390 358 393 370 C397 382 396 393 394 402 C391 412 386 420 378 426 C370 432 360 437 346 436 C332 436 314 434 294 424 C274 414 248 397 226 375 C204 352 175 315 163 288 C150 262 143 227 151 214 C159 201 187 203 211 210 C236 216 273 238 298 255 C324 271 349 291 366 307 C384 324 395 339 403 354 C412 368 415 381 416 393 C418 405 417 415 413 425 C410 434 405 443 396 449 C388 455 378 460 364 461 C350 462 333 462 312 452 C290 443 262 429 236 405 C210 380 173 339 155 305 C137 272 120 224 126 204 C132 184 161 182 190 188 C218 194 264 221 295 239 C327 258 357 281 379 299 C401 318 415 334 426 350 C438 365 443 379 447 392 C452 405 453 417 454 428 C455 439 454 449 453 459 C451 468 449 476 445 484 C441 492 437 499 430 504 C424 510 416 515 404 517 C392 520 379 523 359 518 C338 512 313 508 282 486 C251 464 207 431 174 387 C141 343 93 264 84 222 C74 181 87 143 116 137 C145 132 212 169 257 191 C302 213 353 246 388 268 C423 291 446 310 466 327 C486 344 496 358 507 371 C518 384 525 395 534 405 C542 415 550 423 560 429 C571 435 582 440 597 439 C612 439 630 437 651 426 C672 416 699 399 722 375 C744 352 774 313 786 285 C798 258 805 223 796 210 C787 197 758 201 732 208 C706 216 669 239 642 255 C616 272 592 292 574 309 C556 325 545 341 537 355 C529 370 526 383 524 395 C522 407 523 418 526 427 C529 437 534 445 542 452 C549 458 559 465 572 466 C585 468 601 469 622 462 C643 454 670 443 696 420 C723 397 761 359 782 324 C804 289 827 235 825 211 C824 187 799 177 772 180 C745 183 697 210 663 228 C630 247 595 271 571 290 C547 310 530 327 517 343 C504 359 498 374 492 387 C486 401 484 413 482 424 C480 435 480 446 479 455 C479 465 479 474 480 482 C481 490 482 498 483 505 C485 512 487 518 490 524 C493 530 496 535 502 539 C508 544 514 548 524 550 C534 552 545 555 563 552 C582 548 603 547 634 529 C664 510 707 487 746 442 C785 397 847 313 867 259 C888 205 896 134 872 117 C848 101 774 138 722 160 C670 182 605 223 562 249 C519 274 488 293 463 311 C438 328 425 342 411 354 C397 366 389 375 378 383 C367 391 358 397 346 400 C334 402 320 403 305 398 C290 393 271 385 254 371 C236 357 215 335 202 316 C189 297 178 270 178 256 C177 242 188 232 202 231 C216 230 241 241 261 250 C280 260 303 277 319 290 C336 304 349 318 358 331 C367 344 371 356 373 367 C375 377 373 387 369 394 C365 402 358 408 348 411 C339 414 326 415 311 410 C295 406 276 398 257 383 C238 369 214 345 199 324 C184 302 169 271 168 254 C166 237 176 224 191 222 C206 220 234 232 256 242 C278 253 305 271 323 286 C341 300 356 316 367 330 C377 344 382 357 385 368 C388 380 387 391 384 399 C381 408 375 416 367 420 C358 425 347 429 332 427 C317 425 299 421 279 409 C259 396 233 377 213 354 C193 331 169 294 161 271 C154 248 154 222 166 214 C177 206 207 214 231 222 C255 231 288 252 310 268 C333 283 354 302 368 317 C383 332 391 347 397 360 C404 374 405 386 405 397 C405 407 401 417 396 425 C390 433 383 440 372 443 C361 447 347 449 330 445 C312 441 290 434 266 417 C243 400 211 372 190 344 C169 315 144 269 139 244 C135 219 145 198 164 194 C183 191 222 208 251 222 C281 236 316 259 340 277 C364 295 383 314 397 330 C411 346 418 361 424 374 C430 388 431 400 432 411 C432 423 430 433 427 442 C423 451 418 460 410 466 C403 472 394 478 380 480 C367 482 351 483 329 476 C308 468 281 458 252 434 C224 410 183 370 159 332 C135 294 107 233 108 206 C109 179 135 167 164 169 C193 172 246 203 283 222 C319 242 356 268 383 288 C409 308 426 326 440 342 C455 359 462 373 469 386 C476 400 479 412 483 423 C488 434 490 445 494 454 C498 463 501 472 506 479 C512 487 517 494 526 499 C535 504 544 509 559 509 C574 509 591 511 615 501 C639 491 670 479 703 449 C735 419 783 369 809 323 C836 278 864 205 859 177 C854 148 814 146 777 154 C740 162 677 201 636 225 C595 248 557 274 529 294 C502 314 485 331 470 347 C455 362 448 376 439 388 C430 400 425 411 417 420 C409 430 402 438 392 444 C381 449 370 454 354 454 C339 453 320 452 298 440 C276 429 247 411 222 385 C197 359 163 316 149 285 C135 254 127 214 137 199 C147 185 180 190 209 199 C238 208 280 233 309 252 C338 270 364 291 383 309 C402 326 414 342 423 357 C433 372 437 385 440 398 C443 410 443 422 442 432 C441 443 438 452 434 461 C430 469 426 477 418 483 C410 489 401 494 388 496 C374 497 359 499 337 492 C315 484 287 475 256 450 C226 425 182 384 155 342 C128 301 96 231 95 200 C95 170 122 155 153 157 C185 160 244 194 284 216 C324 237 364 265 393 285 C421 306 440 324 455 340 C471 357 479 371 487 384 C496 397 501 409 507 420 C513 430 518 440 525 448 C533 456 540 463 551 468 C563 472 575 476 593 473 C610 470 632 467 657 451 C683 436 717 412 744 379 C772 347 809 292 820 258 C832 224 831 186 813 176 C796 166 750 183 715 198 C681 212 636 241 605 262 C575 282 550 302 532 320 C513 338 503 353 494 368 C485 383 481 396 477 408 C473 420 471 431 469 442 C466 452 465 462 463 470 C461 479 460 487 457 495 C455 502 452 509 448 515 C443 521 439 526 431 531 C423 535 415 539 402 539 C388 540 373 542 349 533 C326 524 296 516 261 487 C226 458 173 411 140 359 C107 307 62 215 62 177 C62 139 98 124 137 129 C177 134 252 181 300 207 C349 232 394 261 427 283 C460 304 480 320 498 336 C516 351 525 363 537 374 C548 385 555 394 566 401 C576 408 586 414 599 415 C613 416 628 416 646 408 C663 401 685 389 704 371 C723 354 748 326 760 303 C773 281 783 251 779 237 C776 223 758 218 739 221 C721 223 690 239 667 252 C645 265 621 283 605 298 C588 313 576 329 568 342 C559 356 556 368 554 379 C553 390 555 400 560 408 C564 416 571 424 581 427 C591 431 604 433 620 430 C636 426 657 419 678 404 C699 389 727 365 746 340 C765 315 787 276 792 254 C796 232 788 212 773 208 C757 203 723 216 698 228 C672 239 640 261 618 277 C596 294 578 311 565 327 C552 342 545 356 540 369 C535 382 534 394 535 405 C536 415 540 425 546 432 C552 440 560 447 571 450 C583 453 597 456 615 451 C633 446 657 438 681 420 C705 402 738 373 760 342 C782 312 808 263 812 238 C815 212 803 192 782 189 C762 186 719 206 689 221 C658 236 622 261 597 279 C573 298 554 316 540 332 C526 349 519 363 513 377 C507 391 505 403 504 414 C503 426 504 436 507 446 C509 455 513 464 519 471 C525 479 532 485 542 489 C553 493 576 494 583 495";
+    const arrows = [];
+    const centers = [[300, 345], [705, 345]];
+    for (let gx = 100; gx <= 900; gx += 88) {
+      for (let gy = 150; gy <= 580; gy += 74) {
+        let c = centers[0], best = 1e9;
+        for (const k of centers) { const dd = (gx - k[0]) ** 2 + (gy - k[1]) ** 2; if (dd < best) { best = dd; c = k; } }
+        let rx = gx - c[0], ry = gy - c[1]; const r = Math.hypot(rx, ry) || 1;
+        let dx = -ry / r + rx / r * 0.28, dy = rx / r + ry / r * 0.28;
+        const dn = Math.hypot(dx, dy) || 1; dx /= dn; dy /= dn;
+        arrows.push({ x1: gx, y1: gy, x2: Math.round(gx + dx * 13), y2: Math.round(gy + dy * 13) });
+      }
+    }
+    const B = [
+      { label: 'Saddle · origin', t: 'Where the two wings meet lies a saddle — the flow rushes in one way and back out another.', hx: 500, hy: 558, s: 1.5, rot: 0, cx: 120, cy: 130 },
+      { label: 'Unstable spiral · C₊', t: 'The right wing circles an unstable spiral — trajectories wind outward and never rest.', hx: 705, hy: 345, s: 1.9, rot: 0, cx: 80, cy: 150 },
+      { label: 'Unstable spiral · C₋', t: 'The left wing is its mirror — another unstable spiral. Flow is handed between the two.', hx: 300, hy: 345, s: 1.9, rot: 0, cx: 980, cy: 150 },
+      { label: 'Sensitive dependence', t: 'Two starts a hair apart pull away exponentially — the path never repeats. This is chaos.', hx: 500, hy: 345, s: 1.02, rot: -8, cx: 120, cy: 600, v: true },
+    ];
+    const i = Math.max(0, Math.min(B.length - 1, this.state.i));
+    const b = B[i];
+    const px = 0.9 * b.hx, py = 0.9 * b.hy;
+    let tf;
+    if (b.rot) {
+      const gx = 450, gy = 306;
+      tf = `translate(${gx}px,${gy}px) rotate(${b.rot}deg) translate(${-gx}px,${-gy}px) scale(${b.s})`;
+    } else {
+      tf = `translate(${(px * (1 - b.s)).toFixed(1)}px,${(py * (1 - b.s)).toFixed(1)}px) scale(${b.s})`;
+    }
+    const on = !!this.state.field;
+    return {
+      accent, lorenz, tf, arrows,
+      anim: (this.state.play % 2 === 0) ? 'drawA' : 'drawB',
+      label: b.label, beat: b.t, verified: !!b.v,
+      hx: b.hx, hy: b.hy, cardLeft: b.cx, cardTop: b.cy,
+      fieldOpacity: on ? 0.85 : 0,
+      fieldStroke: on ? accent : '#8a97a6',
+      trackBg: on ? accent : 'rgba(255,255,255,0.16)',
+      knobLeft: on ? '17px' : '2px',
+      dots: B.map((x, k) => ({ bg: k === i ? '#ffc76b' : 'rgba(255,255,255,0.2)' })),
+      prev: () => this.setState({ i: Math.max(0, this.state.i - 1) }),
+      next: () => this.setState({ i: Math.min(B.length - 1, this.state.i + 1) }),
+      replay: () => this.setState({ i: 0, play: this.state.play + 1 }),
+      toggleField: () => this.setState({ field: this.state.field ? 0 : 1 }),
+    };
+  }
+}
+</script>
+</body>
+</html>

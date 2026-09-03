@@ -8,7 +8,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 holder.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0e1116);
+scene.background = new THREE.Color(0x080b10);
 
 const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 1000);
 camera.up.set(0, 0, 1); // math z is up
@@ -48,6 +48,17 @@ function animate() {
     const s = 1 + 0.18 * Math.sin(performance.now() * 0.005);
     highlightMarker.scale.setScalar(s);
   }
+  // self-drawing curves: reveal each line progressively
+  if (drawAnim.length) {
+    const now2 = performance.now();
+    for (let i = drawAnim.length - 1; i >= 0; i--) {
+      const d = drawAnim[i];
+      const p = Math.min(1, (now2 - d.t0) / d.dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      d.line.geometry.setDrawRange(0, Math.max(2, Math.floor(eased * d.count)));
+      if (p >= 1) drawAnim.splice(i, 1);
+    }
+  }
   controls.update();
   renderer.render(scene, camera);
   _frames++;
@@ -69,6 +80,11 @@ let maxStep = 0;
 let steps = [];
 let currentId = null;
 let _frames = 0, _fps = 0, _lastFpsT = performance.now();
+let sceneData = null;
+let fieldHidden = false;               // vector-field toggle state
+let drawLines = [];                    // {line, count} — curves that draw themselves in
+let drawAnim = [];                     // {line, count, t0, dur} — currently animating
+const DRAW_DUR = 1600;
 
 // tutor-driven view: an eased focus target + a pulsing highlight marker (criterion G5)
 let focusTarget = null;      // THREE.Vector3 the controls ease toward
@@ -250,24 +266,60 @@ function computeZScale(sceneData) {
   return Math.min(1, 4 / m);
 }
 
-function buildScene(sceneData) {
+const FIELD_IDS = new Set(["vector_field", "flow_field", "gradient_field"]);
+
+function buildScene(data) {
+  sceneData = data;
   clearContent();
-  zScale = computeZScale(sceneData);
+  drawLines = []; drawAnim = [];
+  zScale = computeZScale(data);
   // reference axes at the origin
   const axes = new THREE.AxesHelper(3.2);
-  axes.material.transparent = true; axes.material.opacity = 0.35;
+  axes.material.transparent = true; axes.material.opacity = 0.22;
   contentGroup.add(axes);
 
-  for (const layer of sceneData.layers) {
+  for (const layer of data.layers) {
     const obj = buildLayer(layer);
     obj.userData.step = layer.step;
+    obj.userData.isField = layer.type === "vectors" && FIELD_IDS.has(layer.id);
     contentGroup.add(obj);
     layerObjects.push({ object: obj, step: layer.step });
+    // collect self-drawing curves (trajectories, image ellipses, descent paths)
+    if (layer.type === "polyline" || layer.type === "curve") {
+      obj.traverse((o) => {
+        if (o.isLine && o.geometry.getAttribute("position")) {
+          drawLines.push({ line: o, count: o.geometry.getAttribute("position").count });
+        }
+      });
+    }
   }
-  steps = sceneData.steps || [];
+  steps = data.steps || [];
   maxStep = layerObjects.reduce((m, l) => Math.max(m, l.step), 0);
   setStep(maxStep); // show the finished scene first
   fitCamera();
+  startDrawIn();
+}
+
+// (re)start the self-drawing animation for every curve in the scene
+function startDrawIn() {
+  drawAnim = drawLines.map((d) => ({ ...d, t0: performance.now(), dur: DRAW_DUR }));
+  for (const d of drawLines) d.line.geometry.setDrawRange(0, 2);
+}
+
+// reveal up to step k and fly the camera to the geometry that step introduces (G5)
+function focusStep(k) {
+  setStep(k);
+  const box = new THREE.Box3();
+  let any = false;
+  for (const l of layerObjects) {
+    if (l.step === k && l.object.visible) { box.expandByObject(l.object); any = true; }
+  }
+  if (any && !box.isEmpty()) {
+    const c = box.getBoundingSphere(new THREE.Sphere()).center;
+    focusOn([c.x, c.y, c.z / (zScale || 1)], 0.55);
+  } else {
+    fitCamera(); clearHighlight();
+  }
 }
 
 function fitCamera() {
@@ -287,8 +339,11 @@ function fitCamera() {
 
 function setStep(k) {
   currentStep = Math.max(0, Math.min(maxStep, k));
-  for (const l of layerObjects) l.object.visible = l.step <= currentStep;
-  renderStepList();
+  for (const l of layerObjects) {
+    let vis = l.step <= currentStep;
+    if (fieldHidden && l.object.userData.isField) vis = false;
+    l.object.visible = vis;
+  }
 }
 
 // Verification/debug hook: lets a test (and the eventual automated G2/G3 checks) read the
@@ -321,7 +376,7 @@ window.__ml = {
 
 // Drive the view to a feature the tutor is explaining (criterion G5). ``target`` is a raw
 // scene-space point [x, y, z]; it is mapped through the same V() transform the geometry uses.
-function focusOn(target) {
+function focusOn(target, zoom = 0.9) {
   const p = V(target);
   focusTarget = p.clone();
   highlightMarker.position.copy(p);
@@ -329,7 +384,7 @@ function focusOn(target) {
   // ease the camera in while keeping its current viewing direction
   const dir = camera.position.clone().sub(controls.target).normalize();
   const r = new THREE.Box3().setFromObject(contentGroup).getBoundingSphere(new THREE.Sphere()).radius || 3;
-  focusCamPos = p.clone().addScaledVector(dir, Math.max(r * 0.9, 2.5));
+  focusCamPos = p.clone().addScaledVector(dir, Math.max(r * zoom, 1.8));
 }
 function clearHighlight() {
   highlightMarker.visible = false;
@@ -339,51 +394,31 @@ window.__ml.focusOn = focusOn;
 
 // ---------------------------------------------------------------- UI ----------
 const $ = (id) => document.getElementById(id);
-const stepList = $("step-list");
-const stepLabel = $("step-label");
-const qSection = $("quantities-section");
 const qEl = $("quantities");
-const titleEl = $("scene-title");
 const thinkingEl = $("thinking");
 const errorEl = $("error");
-const answerSection = $("answer-section");
-const answerText = $("answer-text");
-const modelDerived = $("model-derived");
+const brainBadge = $("brain-badge");
 const tracePanel = $("trace-panel");
 const traceToggle = $("trace-toggle");
-const walkSection = $("walk-section");
-const walkBtn = $("walk-btn");
-const walkControls = $("walk-controls");
-const chatSection = $("chat-section");
-const chatLog = $("chat-log");
-const brainBadge = $("brain-badge");
+const replayBtn = $("replay-btn");
+const fieldToggle = $("field-toggle");
+const tutorCard = $("tutor-card");
+const tutorLabel = $("tutor-label");
+const tutorText = $("tutor-text");
+const tutorPrev = $("tutor-prev");
+const tutorNext = $("tutor-next");
+const tutorDots = $("tutor-dots");
+const tutorCounter = $("tutor-counter");
+const tutorVerified = $("tutor-verified");
+const modelDerived = $("model-derived");
+const resultsToggle = $("results-toggle");
+const resultsPanel = $("results-panel");
+const chatInput = $("chat-input");
+const sendBtn = $("send-btn");
 
 const SESSION = Math.random().toString(36).slice(2);
-
-const EXAMPLES = [
-  ["Surfaces", ["f = x^2 + y^2", "f = x^2 - y^2", "f = sin(x)*cos(y)"]],
-  ["Optimization", ["minimize x^2 + 3y^2 starting at (3,2)",
-                    "minimize x^2 + y^2 subject to x + y = 1"]],
-  ["Vector fields", ["F = (-y, x)", "F = (x, y)"]],
-  ["Linear algebra", ["[[2,1],[1,2]]", "the SVD of [[1,2,0],[0,1,2],[2,0,1]]"]],
-  ["Dynamical systems", ["x' = y, y' = -x - y", "show me an example of chaos"]],
-];
-
-function buildExamples() {
-  const host = $("examples");
-  for (const [name, prompts] of EXAMPLES) {
-    const g = document.createElement("div");
-    g.className = "area-group";
-    g.innerHTML = `<div class="area-name">${name}</div>`;
-    for (const p of prompts) {
-      const b = document.createElement("button");
-      b.className = "problem"; b.textContent = p;
-      b.onclick = () => { promptInput.value = p; submitProblem(p); };
-      g.appendChild(b);
-    }
-    host.appendChild(g);
-  }
-}
+let beats = [];       // {label, text, focus, revealStep, verified, model_derived}
+let beatIdx = 0;
 
 async function loadHealth() {
   try {
@@ -398,7 +433,7 @@ async function loadHealth() {
 let busy = false;
 async function postAgent(text) {
   if (busy || !text.trim()) return null;
-  busy = true; errorEl.hidden = true; thinkingEl.hidden = false;
+  busy = true; errorEl.hidden = true; thinkingEl.hidden = false; sendBtn.disabled = true;
   try {
     const res = await fetch("/api/agent", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -409,67 +444,87 @@ async function postAgent(text) {
     errorEl.hidden = false; errorEl.textContent = "Request failed: " + e.message;
     return null;
   } finally {
-    thinkingEl.hidden = true; busy = false;
+    thinkingEl.hidden = true; busy = false; sendBtn.disabled = false;
   }
 }
 
-async function submitProblem(text) {
-  const r = await postAgent(text);
-  if (r) renderResult(text, r);
+function firstFocus(r) {
+  const d = (r.directives || []).find((x) => x && x.type === "focus" && Array.isArray(x.target));
+  return d ? d.target : null;
+}
+function allVerified(qs) { return !!(qs && qs.length && qs.every((q) => q.verification && q.verification.passed)); }
+function layerLabel(step) {
+  const ls = (sceneData?.layers || []).filter((l) => l.step === step && l.label);
+  return ls.map((l) => l.label).join(" · ");
 }
 
 function renderResult(userText, r) {
-  applyDirectives(r.directives || []);
   const isSolve = (r.trace?.tool_sequence || []).some((t) => t.startsWith("solve_"));
+  renderTrace(r.trace);
   if (r.scene && isSolve) {
     newProblem(r);
-  } else if (answerSection.hidden) {
-    answerText.textContent = r.answer;
-    modelDerived.hidden = !r.model_derived;
-    renderTrace(r.trace);
-    answerSection.hidden = false;
-  } else {
-    appendChat("you", userText);
-    appendChat("tutor", r.answer);
-    chatSection.hidden = false;
+    return;
   }
+  // follow-up, focus move, or decline — add a beat and jump to it
+  if (!sceneData) {                     // nothing solved yet (e.g. a decline)
+    tutorCard.hidden = false;
+    beats = [{ label: r.declined ? "Note" : "Answer", text: r.answer, focus: "hold",
+               revealStep: maxStep, verified: false, model_derived: r.model_derived }];
+    goBeat(0);
+    return;
+  }
+  const tgt = firstFocus(r);
+  beats.push({ label: "Answer", text: r.answer, focus: tgt ? { target: tgt } : "hold",
+               revealStep: maxStep, verified: !r.model_derived && allVerified(sceneData.quantities),
+               model_derived: r.model_derived });
+  goBeat(beats.length - 1);
 }
 
 function newProblem(r) {
+  fieldHidden = false;
   clearHighlight();
-  titleEl.textContent = (r.scene && r.scene.title) || "";
-  buildScene(r.scene);              // shows the finished scene — no forced stepping (G4)
+  buildScene(r.scene);                  // shows the finished scene, self-drawing (G4)
   showQuantities(r.quantities || []);
-  answerText.textContent = r.answer;
-  modelDerived.hidden = !r.model_derived;
-  renderTrace(r.trace);
-  answerSection.hidden = false;
-  qSection.hidden = !(r.quantities || []).length;
-  walkReset(r.walkthrough || []);
-  chatLog.innerHTML = "";
-  chatSection.hidden = false;
-  applyDirectives(r.directives || []);
-}
-
-function applyDirectives(dirs) {
-  for (const d of dirs) {
-    if (d && d.type === "focus" && Array.isArray(d.target)) focusOn(d.target);
+  const area = (r.scene.title || r.area || "").trim();
+  beats = [{ label: area || "Answer", text: r.answer, focus: "fit", revealStep: maxStep,
+             verified: allVerified(r.quantities) && !r.model_derived, model_derived: r.model_derived }];
+  for (const s of (r.walkthrough || [])) {
+    beats.push({ label: `Step ${s.step} · ${s.introduces}`, text: layerLabel(s.step) || s.introduces,
+                 focus: { step: s.step }, revealStep: s.step, verified: false, model_derived: false });
   }
+  beatIdx = 0;
+  tutorCard.hidden = false;
+  replayBtn.hidden = false;
+  traceToggle.hidden = false;
+  resultsPanel.hidden = true;
+  const hasField = (r.scene.layers || []).some((l) => l.type === "vectors" && FIELD_IDS.has(l.id));
+  fieldToggle.hidden = !hasField;
+  fieldToggle.classList.toggle("on", hasField && !fieldHidden);
+  goBeat(0);
 }
 
-// --- rendering pieces --------------------------------------------------------
-
-function renderStepList() {
-  const introduced = steps.map((s) => s.introduces);
-  stepLabel.textContent = currentStep === 0 ? "base scene" : `step ${currentStep} of ${maxStep}`;
-  stepList.innerHTML = "";
-  introduced.forEach((name, i) => {
-    const stepIdx = steps[i].step;
-    const li = document.createElement("li");
-    li.textContent = name;
-    if (stepIdx === currentStep) li.className = "current";
-    else if (stepIdx > currentStep) li.className = "future";
-    stepList.appendChild(li);
+function goBeat(i) {
+  if (!beats.length) return;
+  beatIdx = Math.max(0, Math.min(beats.length - 1, i));
+  const b = beats[beatIdx];
+  // drive the visualization
+  if (b.focus === "fit") { setStep(b.revealStep); clearHighlight(); fitCamera(); }
+  else if (b.focus === "hold") { setStep(b.revealStep); }
+  else if (b.focus && b.focus.step != null) { focusStep(b.focus.step); }
+  else if (b.focus && b.focus.target) { setStep(b.revealStep); focusOn(b.focus.target, 0.55); }
+  // update the card
+  tutorLabel.textContent = b.label;
+  tutorText.textContent = b.text;
+  tutorVerified.hidden = !b.verified;
+  modelDerived.hidden = !b.model_derived;
+  tutorCounter.textContent = `${beatIdx + 1} / ${beats.length}`;
+  tutorPrev.disabled = beatIdx === 0;
+  tutorNext.disabled = beatIdx === beats.length - 1;
+  tutorDots.innerHTML = "";
+  beats.forEach((_, k) => {
+    const s = document.createElement("span");
+    if (k === beatIdx) s.className = "on";
+    tutorDots.appendChild(s);
   });
 }
 
@@ -486,65 +541,55 @@ function showQuantities(quantities) {
       `${v.tolerance.toExponential(0)} <span class="prov">via ${q.provenance}</span></div>`;
     qEl.appendChild(div);
   }
-  qSection.hidden = quantities.length === 0;
 }
 
 function renderTrace(trace) {
   if (!trace || !trace.calls) { tracePanel.innerHTML = ""; return; }
   const rows = trace.calls.map((c) => {
-    const badge = c.ok
-      ? (c.verified ? '<span class="ok">✓ verified</span>'
-                    : (c.produced && c.produced.length ? '<span class="ok">ok</span>' : '<span class="ok">ok</span>'))
-      : '<span class="bad">error</span>';
+    const badge = c.ok ? (c.verified ? '<span class="ok">✓ verified</span>' : '<span class="ok">ok</span>')
+                       : '<span class="bad">error</span>';
     const prov = (c.provenance || []).length ? ` · via ${(c.provenance).join(", ")}` : "";
-    return `<div class="tcall"><code>${escapeHtml(c.tool)}(${escapeHtml(JSON.stringify(c.input))})</code>`
-         + ` ${badge}${prov}</div>`;
+    return `<div class="tcall"><code>${escapeHtml(c.tool)}(${escapeHtml(JSON.stringify(c.input))})</code> ${badge}${prov}</div>`;
   }).join("");
   tracePanel.innerHTML =
     `<div class="tinterp">interpretation: ${escapeHtml(trace.interpretation || "—")}</div>`
-    + (rows || '<div class="tcall">no tools called (answered from the current problem)</div>');
-}
-
-function appendChat(who, text) {
-  const div = document.createElement("div");
-  div.className = "bubble " + (who === "you" ? "you" : "tutor");
-  div.innerHTML = `<span class="who">${who}</span> ${escapeHtml(text)}`;
-  chatLog.appendChild(div);
-  chatLog.scrollTop = chatLog.scrollHeight;
+    + (rows || '<div class="tcall">answered from the current problem (no tools called)</div>');
 }
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
 
-// --- walkthrough (opt-in) ----------------------------------------------------
+// --- controls ----------------------------------------------------------------
 
-function walkReset(walkthrough) {
-  walkSection.hidden = !(walkthrough && walkthrough.length);
-  walkControls.hidden = true;
-  walkBtn.hidden = false;
-  setStep(maxStep); // default: the finished scene
-}
-walkBtn.onclick = () => { walkControls.hidden = false; walkBtn.hidden = true; setStep(0); };
-$("step-prev").onclick = () => setStep(currentStep - 1);
-$("step-next").onclick = () => setStep(currentStep + 1);
+tutorPrev.onclick = () => goBeat(beatIdx - 1);
+tutorNext.onclick = () => goBeat(beatIdx + 1);
 
-// --- trace toggle (G7) -------------------------------------------------------
+replayBtn.onclick = () => { startDrawIn(); beatIdx = 0; goBeat(0); };
+
+fieldToggle.onclick = () => {
+  fieldHidden = !fieldHidden;
+  fieldToggle.classList.toggle("on", !fieldHidden);
+  setStep(currentStep);
+};
 
 traceToggle.onclick = () => {
   const show = tracePanel.hidden;
   tracePanel.hidden = !show;
+  traceToggle.classList.toggle("on", show);
   traceToggle.setAttribute("aria-expanded", String(show));
-  traceToggle.textContent = (show ? "▾ hide" : "▸ show") + " the agent's tool calls";
 };
 
-// --- inputs ------------------------------------------------------------------
+resultsToggle.onclick = () => {
+  const show = resultsPanel.hidden;
+  resultsPanel.hidden = !show;
+  tutorCard.hidden = show;            // swap the two (they share the lower-left slot)
+  resultsToggle.setAttribute("aria-expanded", String(show));
+};
+resultsPanel.addEventListener("click", (e) => {
+  if (e.target === resultsPanel) { resultsPanel.hidden = true; tutorCard.hidden = false; }
+});
 
-const promptInput = $("prompt-input");
-$("solve-btn").onclick = () => submitProblem(promptInput.value);
-promptInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submitProblem(promptInput.value); });
-
-const chatInput = $("chat-input");
 async function sendChat() {
   const text = chatInput.value.trim();
   if (!text) return;
@@ -552,9 +597,8 @@ async function sendChat() {
   const r = await postAgent(text);
   if (r) renderResult(text, r);
 }
-$("chat-send").onclick = sendChat;
+sendBtn.onclick = sendChat;
 chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat(); });
 
-buildExamples();
 loadHealth();
 animate(); // start the render loop once all module state is initialized

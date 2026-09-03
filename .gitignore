@@ -27,3 +27,6 @@ checks/board-url.txt
 
 # Local agent scratch that should not be committed
 .claude/settings.local.json
+
+# Seeded Claude Design canvas output (regenerate from design/ with tools)
+manifold-redesign.html

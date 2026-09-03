@@ -1,0 +1,9 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Manifold — Floating tutor", "is_interactive": true }
+  ],
+  "annotations": [
+    { "id": "note-main", "x": 0, "y": -150, "w": 640, "text": "FLOATING TUTOR\nClick ‹ › in the amber card: the note moves to each feature AND the camera flies there — zoom into a wing, tilt back for the whole attractor. The trajectory draws itself in on load; ↻ Replay (top-right) restarts it. Bottom-left toggles the VECTOR FIELD on/off. Accent (chat + wordmark) is a tweak — try the swatches." }
+  ],
+  "launch": { "view": "canvas" }
+}

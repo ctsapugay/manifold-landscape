@@ -662,3 +662,32 @@ reader: state, not narrative.
   site-packages + the new `.venv`), done under Clara's "you do the rest / get it working"
   direction; base-env h11 restored.
 - **blockers:** none.
+
+## 2026-09-02 — App redesign implemented (refined-dark "floating tutor")
+
+- **state:** ✅ Goal still met; `verify.py` GREEN (CHK-001…012). The web app UI was rebuilt to
+  the approved Claude Design direction and is working live on Claude Sonnet 4.6.
+- **done (web/ redesign):**
+  - `web/index.html` + `web/style.css` rewritten: immersive full-screen 3-D stage, refined-dark
+    theme (Space Grotesk + IBM Plex via Google Fonts w/ fallbacks), glass panels, atmospheric
+    glow, floating chat bar, floating **tutor card**, top-right **Replay** + **Tool calls**
+    chips, bottom-left **Vector field** toggle, thinking indicator. No example-problem clutter.
+  - `web/app.js`: darker scene bg; **self-drawing curves** (setDrawRange animation on
+    trajectories/curves); `focusOn(target, zoom)` + `focusStep(k)` fly the camera to each
+    step's geometry; **tutor card = a beat stepper** (beat 0 = answer, beats 1..N = walkthrough
+    steps) that reveals layers AND drives the camera per step; **Replay** restarts the draw-in
+    + resets beats; **vector-field toggle** (`fieldHidden`, honored in `setStep`); multi-turn
+    follow-ups append beats. Kept the CHK-012 hooks (trace-toggle/panel, thinking, renderTrace,
+    requestAnimationFrame) and `window.__ml` state/bench.
+  - `agent/claude_brain.py`: system prompt now asks for PLAIN prose (no Markdown/LaTeX) so the
+    tutor card reads cleanly.
+- **browser-verified (live Sonnet 4.6):** "show me an example of chaos" → Lorenz draws itself
+  in, tutor card 1/5 with verified badge; stepping flies the camera (step 2 revealed [0,1],
+  refit); Vector field toggle [0,1]→[1]→[0,1]; Replay resets to 1/5 + redraws; "what does a
+  saddle look like" → clean plain-prose answer + saddle surface. All 12 checks green.
+- **notes / minor:** vendored Three.js already served at /vendor/; on a NARROW pane the
+  bottom-left field toggle is partly overlapped by the centered chat bar (fine on a normal
+  monitor). Design canvas working files (Main.dc.html, Annotations.dc.html, SideRail.dc.html,
+  canvas.json, manifold-redesign.html) live in the repo root, untracked.
+- **next:** await Clara — offer to commit + push the redesign (and decide whether the .dc.html
+  design working files belong in the repo / a subfolder).

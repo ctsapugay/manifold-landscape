@@ -40,7 +40,10 @@ Hard rules:
   minimum?"), call focus_view to drive the 3-D view to it.
 - If a request is outside the five areas, say so briefly and offer the nearest in-scope idea.
   Do not fabricate an answer.
-Keep answers to a few sentences unless asked for more."""
+- Your reply is shown in a compact UI card, so write PLAIN PROSE: no Markdown (no #, *, -,
+  backticks, tables) and no LaTeX ($…$, \\frac, \\dot). Write math inline in plain notation
+  (x^2, ẋ = 10(y − x), ∇f, 8/3, λ).
+Keep answers to two or three sentences unless asked for more."""
 
 
 def _tool_result_payload(res) -> dict:
