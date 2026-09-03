@@ -64,9 +64,15 @@ dynamical systems and the word-problem / conceptual input styles.
 | L1 | linear algebra as geometry | `A = [[2,1],[1,2]]` | eigen-decomposition; determinant |
 | L2 | linear algebra as geometry | `A = [[1,1],[0,1]]` | shear; non-diagonalizable; determinant |
 | L3 | linear algebra as geometry | `A = [[1,2,0],[0,1,2],[2,0,1]]` | SVD; ellipsoid semi-axes |
+| D1 | dynamical systems (ODEs) | `ẋ=y, ẏ=−x−y` | equilibrium at origin; stable spiral (Jacobian eigenvalues) |
+| D2 | dynamical systems (ODEs) | `ẋ=x, ẏ=−y` | saddle equilibrium (eigenvalues +1, −1) |
+| D3 | dynamical systems (ODEs) | pendulum `ẋ=y, ẏ=−sin(x)` | centre + two saddles; multiple equilibria |
+| D4 | dynamical systems (ODEs) | Lorenz (σ=10, ρ=28, β=8/3) | chaos; verified trajectory + positive finite-time Lyapunov |
 
-Dynamical-systems (ODE) problems — phase portraits, fixed points & stability, chaotic
-systems — are added to the core by the worker (with Clara's approval) as that area is built.
+Dynamical-systems (ODE) problems D1–D4 were added to the protected core when the fifth area
+was built (proposal **P-0003**). Together with the twelve above they are the canonical set
+that must keep succeeding; the worker may still freely append more problems (to
+`suite/problems.json` and `suite/agent_tests.json`) to broaden coverage.
 
 ## CHK-001 — Suite solved and verified against independent references
 
@@ -120,6 +126,46 @@ systems — are added to the core by the worker (with Clara's approval) as that 
 
 - **covers:** G1
 - **run:** python3 -m pytest tests/ -q
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-008 — Agent coverage across the five areas and three input styles
+
+- **covers:** G2
+- **run:** python3 tools/check_agent_coverage.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-009 — Agentic, tool-orchestrated solving (from the recorded trace)
+
+- **covers:** G3
+- **run:** python3 tools/check_agent_trace.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-010 — The tutor drives the visualization to the right feature
+
+- **covers:** G5
+- **run:** python3 tools/check_agent_focus.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-011 — Grounded multi-turn chat and the unbroken agent flow
+
+- **covers:** G6, G8
+- **run:** python3 tools/check_agent_flow.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-012 — Transparent and responsive experience (automatable slice)
+
+- **covers:** G7
+- **run:** python3 tools/check_agent_transparency.py
 - **status:** active
 - **waived:**
 - **waived-by:**

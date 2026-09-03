@@ -411,3 +411,194 @@ reader: state, not narrative.
 - **approvals:** clarifications directed by Clara in-session; recorded via `--baseline`.
 - **proposals:** none new.
 - **dead ends:** none.
+
+## 2026-09-02 — Expansion build begins: fifth area (dynamical systems / ODEs) landed
+
+- **state:** 🚧 Goal mode, building the agentic-tutor expansion on the shipped foundation.
+  **Milestone 1 done:** the 5th area (dynamical systems / ODEs) is fully implemented,
+  verified, and integrated. All **31 tests** pass (25 foundation + 6 new) and **CHK-001…007
+  are GREEN** over the now-expanded suite (which includes the ODE problems, Lorenz chaos
+  included). No governance changes yet — everything so far is non-governed content.
+- **done:**
+  - `engine/dynamics.py` — `DynamicalSystem(components, vars)` for ẋ=F(x): **fixed points**
+    (F=0, seeded Newton, verified by ‖F(x*)‖ with a scale-aware tolerance so Lorenz-scale
+    roots at radius ~27 aren't punished), **stability** (Jacobian eigenvalues → sink/source/
+    saddle/spiral/centre; symbolic Jacobian confirmed vs finite-difference, each eigenpair by
+    ‖Jv−λv‖), **trajectories** (scipy `solve_ivp` RK45, verified by an INDEPENDENT integrator
+    DOP853 agreeing over each SHORT segment — chaos-robust: never asks two integrators to
+    agree over a long horizon, only per well-posed step), and **separation** (finite-time
+    Lyapunov estimate = quantitative sensitive dependence, verified via the two segment-
+    verified curves). `classify_equilibrium()` names the local flow honestly (a zero real
+    part is flagged "linearisation marginal/inconclusive", not silently called stable).
+  - `engine/scene.py` — `build_dynamics_scene()`: step-tagged phase portrait (flow field
+    step 0, equilibria coloured by stability step 1, trajectories step 3; stability=step 2
+    and separation=step 4 re-read existing geometry). Reuses the frontend's existing
+    vectors/points/polyline renderers, so **no JS change was needed to render ODE scenes or
+    the Lorenz attractor**.
+  - `web/problems.py` — dispatch + `solution_for` for area `dynamical-systems`; **D1–D4**
+    added to CATALOG (stable spiral, saddle, pendulum [centre + two saddles], Lorenz chaos).
+  - `engine/explain.py` — grounded intents for equilibria / stability / trajectory / chaos
+    (verified spot-checks pass).
+  - `suite/problems.json` — D1–D4 appended (free coverage) with INDEPENDENT references
+    (known equilibrium locations + analytic stability types; Lorenz: 3 equilibria + positive
+    Lyapunov). `tools/run_suite.py` extended with `fixed_points` and `chaotic` reference
+    handlers — a STRENGTHENING (broadens coverage; the protected core's existing references
+    are untouched), and CHK-001's `run:` command is unchanged, so no `checks`-digest drift.
+  - `tests/test_dynamics.py` — 6 tests (D1–D4 + classification + independent-verification).
+- **next:** Milestone 2 — the **agent layer** (`agent/` package): a transport-agnostic
+  tool-orchestration loop with a pluggable brain. `ClaudeBrain` (real, lazy `anthropic`
+  import, key from `.env`, default model `claude-opus-5` via MANIFOLD_MODEL) drives the
+  product; a deterministic `OfflineBrain` drives the offline checks and is the graceful
+  no-key fallback. Tool registry wraps the engine ops (each returns verified quantities);
+  the loop records an inspectable trace + a grounding gate. Then Milestone 3 (frontend:
+  free-form intake, thinking indicator, tool-call toggle, optional walkthrough with tutor
+  scene-driving, multi-turn chat) and Milestone 4 (governed batch: register CHK for
+  G2/G3/G5/G7, revise CHK-004/005/006 + scope doc for 5 areas + PDEs, propose adding the
+  ODE canonicals to the protected core — all as proposals for Clara).
+- **decisions:** (1) **Checks stay offline/deterministic** (C-LOCAL bars network in checks),
+  so the agent loop is transport-agnostic and the automated G2/G3/G5/G7 checks will run the
+  loop with the OfflineBrain; the real Claude path is wired + unit-testable against canned
+  responses, and manually demoable once Clara supplies a key. This is an implementation
+  choice (how, not what): the shipped product's agent IS Claude; the offline brain is a
+  fallback + test substrate. Will be documented in scope docs. (2) Trajectory verification
+  is segment-local, not long-horizon — a deliberate, math-honest choice for chaos. (3)
+  Lorenz fixed-point tolerance is scale-relative. (4) D4 in the suite uses samples=2500,
+  t_span 35 (lighter than the CATALOG's 4000/40) to keep the check suite snappy.
+- **blockers:** none. (An API key is needed to DEMO the live Claude agent, but is NOT needed
+  to meet the automated criteria; will note as a soft blocker when the agent path lands.)
+- **approvals/proposals:** none this segment.
+- **dead ends:** none.
+
+## 2026-09-02 — Milestone 2: the agentic tutor (tool-orchestration layer)
+
+- **state:** 🚧 Goal mode. **Milestone 2 done:** the transport-agnostic agent layer is built
+  and tested. **49 tests pass** (25 foundation + 6 dynamics + 18 agent); **CHK-001…007 GREEN**.
+  Still all non-governed content.
+- **done — new `agent/` package:**
+  - `tools.py` — `ToolRegistry`: the engine wrapped as 7 schema'd tools (solve_scalar_field,
+    solve_optimization, solve_constrained_optimization, solve_vector_field,
+    solve_linear_algebra, solve_dynamical_system, **focus_view**). Each returns verified
+    quantities + scene; a solver that can't compute returns an error (graceful, never crashes).
+    `focus_view` resolves a named feature ("the minimum", "the saddle", "the attractor") to a
+    camera/highlight directive from the VERIFIED geometry — the mechanism for the tutor
+    driving the view (G5).
+  - `trace.py` — inspectable `AgentTrace`/`ToolCall` (tool sequence, per-call provenance +
+    verified flag) → backs the G7 transparency toggle and the G3 trace check.
+  - `intake.py` — deterministic interpreter: equations / word problems / conceptual prompts
+    → tool plans, across all 5 areas; forgiving expression parsing (implicit mult, '^'),
+    prose-stripping ("minimize … starting at (3,2)"), a conceptual library ("show me chaos"→
+    Lorenz, "a rotating field"→(−y,x), etc.), and graceful decline w/ nearest-in-scope.
+  - `brain.py` + `offline_brain.py` + `claude_brain.py` — pluggable brains. **OfflineBrain**
+    (deterministic; drives offline checks + no-key fallback; composes answers via the
+    grounded `Explainer`). **ClaudeBrain** (real product; manual Anthropic tool-use loop;
+    **lazy** `anthropic` import; message history for multi-turn G6; default `claude-opus-5`
+    via MANIFOLD_MODEL; injectable client for offline tests).
+  - `agent.py` — `Agent` (session state: current problem + view) + `Tracer` + `build_agent()`
+    (picks Claude when key+SDK present, else offline). **Grounding gate** (`grounding.py`):
+    scans the answer's numbers against the verified quantities; anything untraceable is
+    labelled "model-derived and unverified" (C-VERIFIED-MATH backstop on the Claude path).
+  - `tests/test_agent.py` — 18 tests: interpretation across 5 areas × 3 styles, different
+    inputs → different tool sequences (G3), out-of-scope decline (G2), grounded multi-turn
+    chat (G6), the tutor moving the view on a focusing question (G5), and the **Claude
+    tool-use loop threaded correctly with a canned client — no network, no key**.
+- **engine improvement:** `optimization.gradient_descent` now does **backtracking line
+  search** (shrink the step until the objective doesn't increase / stays finite), so arbitrary
+  landscapes (e.g. Rosenbrock from a generic start) no longer diverge/overflow — the descent
+  is always well-defined and its non-increasing verification always holds. Foundation suite +
+  tests still green. Also relabelled the constrained scene's `area` to "optimization".
+- **next:** Milestone 3 — **web integration**: `/api/agent` endpoint (per-session stateful
+  Agent) + `/api/agent/health`; rewrite the frontend so the free-form box + example prompts
+  ALL route through the agent (unifies G4/G5/G6/G7): default = answer + interactive 3D (no
+  forced stepping), OPT-IN walkthrough, thinking indicator, tool-call transparency toggle,
+  tutor driving the camera/highlights via directives, multi-turn chat. Then M4 (governed
+  proposals: new CHK for G2/G3/G5/G7, revise CHK-004/005/006 + scope doc, ODE core → protected
+  core) and M5 (mark criteria met).
+- **decisions:** unified flow — everything goes through the agent (catalog items become
+  example prompts sent as text), so chat/focus/walkthrough work uniformly (offline brain
+  parses instantly, no network). Per-session Agents kept in an in-memory dict keyed by a
+  frontend-generated session id (local single-user tool).
+- **blockers:** none. (Live Claude demo still needs a key — soft, not gating the criteria.)
+- **approvals/proposals:** none this segment.
+
+## 2026-09-02 — Milestone 3: web integration (the app is live locally)
+
+- **state:** 🚧 Goal mode. **Milestone 3 done & browser-verified.** The agentic tutor runs
+  end-to-end at `python3 web/server.py` → localhost:8765. 49 tests + CHK-001…007 green.
+- **done:**
+  - `web/server.py` — `/api/agent` (per-session stateful Agent, in-memory dict) + `/api/agent/health`.
+  - `web/index.html`, `web/app.js`, `web/style.css` rewritten: free-form "pose a problem" box
+    + example prompts (all route through the agent); answer panel; **tool-call transparency
+    toggle** (shows interpretation + each tool call's provenance/verified — G7); verified
+    results; **opt-in walkthrough** (default = full interactive scene, no forced stepping — G4);
+    **thinking indicator** (spinner while the agent works — G7); **multi-turn chat** (G6);
+    **tutor drives the view** (focus directives → eased camera + pulsing highlight marker — G5).
+  - Browser-verified (offline brain): Lorenz butterfly renders in 3D; answer grounded;
+    trace toggle shows verified provenance; walkthrough steps in sync ([0]→[0,1]); focusing
+    questions ("where is the minimum/attractor?") drive the view to the right feature; decline
+    is graceful. **bench() = 0.367 ms/frame on the Lorenz scene (~45× under the 60fps budget)**
+    → C-INTERACTIVE / G4 smoothness confirmed.
+- **next:** Milestone 4 — back the new criteria with checks. NON-GOVERNED (do now): held-out
+  agent test set (suite/agent_tests.json) + check scripts (coverage G2, trace G3, focus G5,
+  flow+multiturn G6/G8, transparency G7); update docs/scope.md → 5 areas + PDEs deferred and
+  strengthen check_scope_docs.py (G9). GOVERNED (propose to Clara, P-0003): register the new
+  CHK entries + add ODE canonicals D1–D4 to the protected core. Then M5: mark criteria met.
+- **decisions:** strengthening a check script (never weakening) is safe under governance and
+  needs no proposal (same as the run_suite.py ODE handlers); ADDING registry CHK entries and
+  elevating problems to the protected core ARE governed → P-0003 for Clara.
+- **note:** a stale server from a previous session was holding :8765; killed and restarted.
+- **blockers:** none.
+
+## 2026-09-02 — Milestone 4: checks + scope for the new criteria; P-0003 awaiting Clara
+
+- **state:** 🚧 Goal mode. All five build milestones DONE and the whole agentic tutor works
+  end-to-end. **All 12 checks pass** (`verify.py` GREEN: CHK-001…012). **One governed change,
+  P-0003, is WAITING on Clara** — until she approves it, `validate.py` correctly reports
+  `checks` drift and the new checks are not yet part of the baseline, so the criteria stay
+  unmarked. This is the handoff.
+- **done (non-governed):**
+  - Held-out agent test set `suite/agent_tests.json` (5 areas × equation/word/conceptual +
+    out-of-scope; protected-core flags). New check scripts: `check_agent_coverage.py` (G2),
+    `check_agent_trace.py` (G3), `check_agent_focus.py` (G5), `check_agent_flow.py` (G6/G8),
+    `check_agent_transparency.py` (G7) — all pass offline.
+  - `docs/scope.md` → FIVE areas (added dynamical systems/ODEs) + PDEs as a first-class
+    deferred item; strengthened `tools/check_scope_docs.py` to require the 5th area + PDEs (G9).
+  - Interpreter/engine robustness fixes surfaced by the coverage bar (now 100%/100%): trailing
+    "and …"/"… of <expr>" stripping; scale-aware trajectory verification tolerance (saddles
+    that fly off to ~1e7 now verify); grounding gate now treats numbers the user typed
+    (problem coefficients) as given, not model-derived; "optimum/optima" added to focus vocab.
+- **done (governed — in P-0003, needs approval):** registered CHK-008…012 in
+  `checks/registry.md`; added ODE canonicals **D1–D4 to the protected core** table.
+- **NEXT — Clara runs ONE command:** `python3 tools/approve.py P-0003`
+  (review `git diff` + `proposals/P-0003-agent-checks-and-core.md` first). This re-records the
+  baseline to include the five new checks + the ODE core; drift clears. If she'd rather not,
+  `--decline P-0003`. She can delegate in-session ("approve P-0003") → I run it with
+  `--on-behalf-of-clara`.
+- **THEN (worker, after approval):** mark G1–G9 `met` in `goals/criteria.md` with recorded
+  evidence (each criterion's backing check output), set goal state `met`, final `verify.py`
+  + `validate.py` green = done. (Blocked until approval: marking criteria met while P-0003 is
+  unapproved would leave validate red on the drift.)
+- **decisions:** strengthening `check_scope_docs.py`/`run_suite.py` (stricter, never weaker)
+  needs no proposal; ADDING registry checks + protected-core rows does → P-0003.
+- **blockers:** the finish is gated on Clara approving P-0003 (governed; only she can, or
+  delegated in-session). All build work is complete; nothing else is blocked.
+
+## 2026-09-02 — Hardening while P-0003 is pending: Three.js vendored locally
+
+- **state:** 🚧 Still waiting on Clara's `approve.py P-0003` (the only path to done). Used the
+  blocked time on the one self-flagged pre-"done" task. verify.py still GREEN (12/12).
+- **done (non-governed):** vendored **Three.js r160** + OrbitControls into `web/vendor/`
+  (index.html importmap → local paths; server.py serves `/vendor/*` with a path-traversal
+  guard). The locally-run tool now has **no runtime CDN dependency** — it renders fully
+  offline. Browser-verified: paraboloid scene builds from the vendored lib, 1.12 ms/frame,
+  no console errors; all 12 checks unaffected and green.
+- **next:** unchanged — Clara approves P-0003, then worker marks G1–G9 met with evidence and
+  sets the goal met.
+- **blockers:** finishing gated on Clara approving P-0003 (governed). Optional remaining
+  polish (not gating, not started): a project-facing README (the repo's README.md is the
+  constraint-base framework readme — replacing the repo's public face is Clara's call).
+
+## 2026-09-02 — Delegated approval (agent-executed)
+
+- APPROVED: P-0003
+- Clara's stated authority, verbatim: "Yes. I approve. Go ahead and run the approval for me. I'm giving you permission and telling you that I approve."
+- Attribution mode makes this an audit record, not proof the authority was real. Enable signing (docs/governance.md) for approval the agent cannot forge.
