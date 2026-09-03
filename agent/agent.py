@@ -23,6 +23,27 @@ from .tools import ToolRegistry, ToolResult
 from .trace import AgentTrace, ToolCall
 
 
+# The domain each area is drawn over when the descriptor does not name one — the base the
+# expandable-bounds control (G20) scales from. Linear-algebra is intentionally absent: its unit
+# circle/sphere is not a domain, so it is not rescalable.
+_DEFAULT_DOMAIN = {
+    "scalar-fields": ((-3.0, 3.0), (-3.0, 3.0)),
+    "optimization": ((-3.0, 3.0), (-3.0, 3.0)),
+    "vector-fields": ((-2.0, 2.0), (-2.0, 2.0)),
+}
+
+
+def _base_domain(desc: dict):
+    """The domain a solve started from, as a tuple of (lo, hi) per axis — or None if the area
+    is not domain-based."""
+    if desc.get("domain"):
+        return tuple(tuple(float(c) for c in p) for p in desc["domain"])
+    area = desc.get("area")
+    if area == "dynamical-systems":
+        return tuple((-3.0, 3.0) for _ in desc.get("vars", ["x", "y"]))
+    return _DEFAULT_DOMAIN.get(area)
+
+
 class Tracer:
     """Runs tools on the brain's behalf and records every call into the trace."""
 
@@ -82,6 +103,84 @@ class Agent:
         if hasattr(self.brain, "reset"):
             self.brain.reset()
 
+    def answer_step(self, text: str, step: dict) -> AgentResult:
+        """Answer a follow-up question aimed at ONE walkthrough step (criteria G13, G17).
+
+        The answer is produced by the **agent's brain**: the live Claude brain answers it in the
+        running conversation, grounded in the step's verified state (G17); the offline brain
+        composes it deterministically from the grounded Explainer, biased to the step's own
+        quantity. Either way the grounding gate labels any figure that is not tool-verified. It
+        does NOT touch ``self.current``, so the user never loses their place in the walkthrough."""
+        desc = (self.current or {}).get("descriptor")
+        if not desc:
+            return AgentResult(answer="Solve a problem first, then I can answer questions "
+                               "about a step.", declined=True, brain=self.brain.kind)
+        step = step or {}
+        scene = (self.current or {}).get("scene") or {}
+        ctx = {"current_scene": scene, "current_descriptor": desc,
+               "area": (self.current or {}).get("area", "")}
+        tracer = Tracer(self.registry, ctx, self.brain.kind, text)
+        try:
+            if hasattr(self.brain, "answer_step"):
+                out = self.brain.answer_step(text, step, ctx, tracer)
+            else:  # pragma: no cover - every brain defines it
+                out = OrchestrationResult(answer="I can't answer that right now.", declined=True)
+        except Exception as exc:
+            return AgentResult(answer=f"I couldn't ground that against the step "
+                               f"({type(exc).__name__}).", declined=True, brain=self.brain.kind)
+
+        directives = list(out.directives)
+        tgt = step.get("focus_target")
+        if (isinstance(tgt, (list, tuple)) and len(tgt) == 3
+                and not any(d.get("type") == "focus" for d in directives)):
+            directives.append({"type": "focus", "target": [float(c) for c in tgt],
+                               "highlight_layer": None, "label": step.get("focus") or ""})
+
+        quantities = out.quantities or scene.get("quantities", [])
+        g = grounding.check(out.answer, quantities, extra_text=text)
+        model_derived = out.model_derived
+        if not g["grounded"] and quantities:
+            model_derived = True
+        return AgentResult(
+            answer=out.answer, scene=None, area=desc.get("area", ""), quantities=[],
+            directives=directives, grounded_in=out.grounded_in, grounding=g,
+            walkthrough=[], declined=out.declined, model_derived=model_derived,
+            brain=self.brain.kind)
+
+    def rescale(self, factor: float) -> AgentResult | None:
+        """Re-solve the current problem over its domain scaled by ``factor`` (criterion G20).
+
+        Returns ``None`` when there is no current problem, or when the current area is not drawn
+        over a domain (linear-algebra's unit circle/sphere is fixed) — the frontend gates the
+        control on that. The recomputed scene is verified exactly like any other solve, so the
+        expanded picture stays tool-computed and verified (C-VERIFIED-MATH)."""
+        from web.problems import solve_descriptor
+        cur = self.current or {}
+        desc = cur.get("descriptor")
+        if not desc or desc.get("area") == "linear-algebra":
+            return None
+        base = cur.get("base_domain") or _base_domain(desc)
+        if not base:
+            return None
+        factor = max(0.5, min(4.0, float(factor)))
+
+        def expand(lo, hi):
+            c = (lo + hi) / 2.0
+            half = (hi - lo) / 2.0 * factor
+            return [c - half, c + half]
+
+        new_domain = [expand(float(lo), float(hi)) for (lo, hi) in base]
+        new_desc = dict(desc)
+        new_desc["domain"] = new_domain
+        scene = solve_descriptor(new_desc)
+        self.current = {"descriptor": new_desc, "scene": scene,
+                        "area": scene.get("area", ""), "base_domain": base}
+        return AgentResult(
+            answer="", scene=scene, area=scene.get("area", ""),
+            quantities=scene.get("quantities", []),
+            walkthrough=scene.get("lesson") or scene.get("steps", []),
+            brain=self.brain.kind)
+
     def run(self, text: str) -> AgentResult:
         ctx = {
             "current_scene": (self.current or {}).get("scene"),
@@ -100,7 +199,8 @@ class Agent:
         if tracer.last_solve is not None:
             self.current = {"descriptor": tracer.last_solve.descriptor,
                             "scene": tracer.last_solve.scene,
-                            "area": tracer.last_solve.area}
+                            "area": tracer.last_solve.area,
+                            "base_domain": _base_domain(tracer.last_solve.descriptor or {})}
 
         # the request plus any expressions the user posed are legitimate number sources
         extra = text

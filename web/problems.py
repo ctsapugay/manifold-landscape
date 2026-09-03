@@ -16,7 +16,18 @@ from engine.vector_field import VectorField
 from engine.linalg import LinearTransformation
 from engine.dynamics import DynamicalSystem
 from engine.explain import Explainer
+from engine.lesson import build_lesson
 from engine import scene as S
+
+
+def _attach_lesson(scene: dict, sol, d: dict) -> dict:
+    """Attach the fine-grained, staged, readable walkthrough (G11/G12) to a built scene,
+    leaving ``scene["steps"]`` (the geometry-reveal contract) untouched. Never raises."""
+    try:
+        scene["lesson"] = build_lesson(sol, scene, d)
+    except Exception:
+        scene["lesson"] = list(scene.get("steps", []))
+    return scene
 
 
 def _dyn_domain(d: dict) -> tuple:
@@ -90,7 +101,7 @@ def solve_descriptor(d: dict) -> dict:
         domain = tuple(tuple(p) for p in d.get("domain", ((-3, 3), (-3, 3))))
         sol = field.solve(pid, title, domain=domain).require_verified()
         _narrate(sol)
-        return S.build_scalar_scene(field, sol, domain=domain)
+        return _attach_lesson(S.build_scalar_scene(field, sol, domain=domain), sol, d)
 
     if area == "optimization":
         if d.get("subtype") == "constrained":
@@ -112,33 +123,33 @@ def solve_descriptor(d: dict) -> dict:
                 "data": {"points": [{"position": [opt["point"][0], opt["point"][1],
                                                   field.f(opt["point"])],
                                      "type": "minimum", "color": "#d95f02"}]}})
-            return scene
+            return _attach_lesson(scene, sol, d)
         land = OptimizationLandscape(d["expr"], d.get("vars", ("x", "y")))
         domain = tuple(tuple(p) for p in d.get("domain", ((-3, 3), (-3, 3))))
         sol = land.solve_descent(pid, title, start=d.get("start", [2.0, 2.0]),
                                  lr=d.get("lr", 0.05), steps=d.get("steps", 80)).require_verified()
         _narrate(sol)
-        return S.build_optimization_scene(land, sol, domain=domain)
+        return _attach_lesson(S.build_optimization_scene(land, sol, domain=domain), sol, d)
 
     if area == "vector-fields":
         vf = VectorField(d["components"], d["vars"])
         sol = vf.solve(pid, title).require_verified()
         _narrate(sol)
         dom = tuple(tuple(p) for p in d.get("domain", ((-2, 2), (-2, 2))))
-        return S.build_vector_scene(vf, sol, domain=dom)
+        return _attach_lesson(S.build_vector_scene(vf, sol, domain=dom), sol, d)
 
     if area == "linear-algebra":
         T = LinearTransformation(d["matrix"])
         want = tuple(d.get("want", ("determinant", "eigen")))
         sol = T.solve(pid, title, want=want).require_verified()
         _narrate(sol)
-        return S.build_linear_scene(T, sol)
+        return _attach_lesson(S.build_linear_scene(T, sol), sol, d)
 
     if area == "dynamical-systems":
         ds, sol = _dyn_solution(d, pid, title)
         sol.require_verified()
         _narrate(sol)
-        return S.build_dynamics_scene(ds, sol, domain=_dyn_domain(d))
+        return _attach_lesson(S.build_dynamics_scene(ds, sol, domain=_dyn_domain(d)), sol, d)
 
     raise ValueError(f"unknown area: {area!r}")
 

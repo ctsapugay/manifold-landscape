@@ -48,6 +48,49 @@ class Explainer:
         body, sources = self._overview()
         return self._wrap(question, body, sources)
 
+    def answer_about(self, question: str, quantity_name: str | None) -> dict:
+        """Answer ``question`` in the context of a specific walkthrough step, whose verified
+        quantity is ``quantity_name`` (criterion G13). If the question clearly matches another
+        intent it is honoured, but the step's own quantity is always brought into the answer
+        and its grounding, so a bare "why?" on the stability step is answered *about stability*.
+        Grounded by construction — every fragment reads verified quantities."""
+        composer = self._composer_for(quantity_name)
+        text = question.lower()
+        for keywords, handler in self._intents():
+            if any(k in text for k in keywords):
+                composed = handler()
+                if not composed:
+                    continue
+                body, sources = composed
+                # also fold in the step's own quantity if the question didn't already hit it
+                if composer and quantity_name not in sources:
+                    extra = composer()
+                    if extra:
+                        body = extra[0] + " " + body
+                        sources = list(dict.fromkeys(extra[1] + sources))
+                return self._wrap(question, body, sources)
+        # no explicit intent → answer directly about the step's quantity
+        if composer:
+            composed = composer()
+            if composed:
+                return self._wrap(question, composed[0], composed[1])
+        return self.answer(question)
+
+    def _composer_for(self, name: str | None):
+        if not name:
+            return None
+        if name.startswith("trajectory"):
+            return self._trajectory
+        return {
+            "gradient": self._gradient, "hessian": self._hessian,
+            "critical_points": self._critical, "minimum": self._minimum,
+            "descent": self._descent, "constrained_optimum": self._lagrange,
+            "divergence": self._divergence, "curl": self._curl,
+            "determinant": self._determinant, "eigen": self._eigen, "svd": self._svd,
+            "fixed_points": self._fixed_points, "stability": self._stability,
+            "separation": self._chaos,
+        }.get(name)
+
     def _wrap(self, question, body, sources):
         return {
             "question": question,

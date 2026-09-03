@@ -115,9 +115,12 @@ let contourGroup = null;               // the level-set rings (contours-bloom), 
 let drawAnim = [];                     // {geom, count, t0, dur} — geometry revealed by drawRange
 let growAnim = [];                     // {meshes:[{mesh,base}], t0, dur} — point markers scaling in
 let fades = [];                        // {ents, t0, dur} — field/grid layers fading in
-const DRAW_DUR = 2600;
-const FADE_DUR = 850;
-const GROW_DUR = 620;
+// Deliberately unhurried so a first-time learner can follow each shape being drawn on before
+// the next arrives (criterion G11 / C-STEPWISE). Slower than the first pass, which Clara found
+// still too fast to track on a complex problem.
+const DRAW_DUR = 4200;
+const FADE_DUR = 1300;
+const GROW_DUR = 1100;
 
 // tutor-driven view: an eased focus target + a pulsing highlight marker (criterion G5)
 let focusTarget = null;      // THREE.Vector3 the controls ease toward
@@ -565,33 +568,67 @@ window.__ml.focusOn = focusOn;
 window.__ml.drawing = () => ({ draw: drawAnim.length, grow: growAnim.length, fade: fades.length });
 
 // ---------------------------------------------------------------- UI ----------
+// Phase 3: one unified conversation. The tutor's explanation and the chat are a single thread
+// (G16); follow-ups are answered by the agent, grounded in the step's verified state (G17);
+// clickable suggested prompts keep continuing and common questions a click away (G18); a start
+// state opens into a session with a collapsible conversation and a "new chat" return (G19); and
+// the visualization's domain can be expanded (G20).
 const $ = (id) => document.getElementById(id);
-const qEl = $("quantities");
 const thinkingEl = $("thinking");
 const errorEl = $("error");
 const brainBadge = $("brain-badge");
 const tracePanel = $("trace-panel");
 const traceToggle = $("trace-toggle");
-const replayBtn = $("replay-btn");
 const fieldToggle = $("field-toggle");
 const contourToggle = $("contour-toggle");
-const tutorCard = $("tutor-card");
-const tutorLabel = $("tutor-label");
-const tutorText = $("tutor-text");
-const tutorPrev = $("tutor-prev");
-const tutorNext = $("tutor-next");
-const tutorDots = $("tutor-dots");
-const tutorCounter = $("tutor-counter");
-const tutorVerified = $("tutor-verified");
-const modelDerived = $("model-derived");
-const resultsToggle = $("results-toggle");
-const resultsPanel = $("results-panel");
+const launcher = $("launcher");
+const launchInput = $("launch-input");
+const launchSend = $("launch-send");
+const launchChips = $("launch-chips");
+const launchNote = $("launch-note");
+const dock = $("dock");
+const dockTab = $("dock-tab");
+const dockCollapse = $("dock-collapse");
+const dockSub = $("dock-sub");
+const suggestionsEl = $("suggestions");
+const threadEl = $("thread");
 const chatInput = $("chat-input");
 const sendBtn = $("send-btn");
+const newChatBtn = $("new-chat");
+const boundsEl = $("bounds");
+const bdMinus = $("bd-minus");
+const bdPlus = $("bd-plus");
+const bdExpand = $("bd-expand");
+const bdLabel = $("bd-label");
 
-const SESSION = Math.random().toString(36).slice(2);
-let beats = [];       // {label, text, focus, revealStep, verified, model_derived}
-let beatIdx = 0;
+let SESSION = Math.random().toString(36).slice(2);
+let sessionActive = false;
+let thread = [];          // the one conversation (also the history — G14/G16)
+let lessonSteps = [];     // the current problem's walkthrough steps
+let stepCursor = -1;      // index of the last-revealed walkthrough step (-1 = not started)
+let curScene = null;
+let boundsFactor = 1;
+let busy = false;
+
+const IC_SPARK = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4fd6c9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.3L19 10l-5.1 1.7L12 17l-1.9-5.3L5 10l5.1-1.7z"/></svg>';
+const IC_CHECK = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#4fd6c9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+
+// --- notation: render raw expression source as readable notation in the UI (G12) -----------
+const _SUP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻" };
+function notation(src) {
+  if (src == null) return "";
+  let s = String(src);
+  s = s.replace(/\*\*\s*(\d+)/g, (_m, d) => [...d].map((c) => _SUP[c] || c).join(""));
+  s = s.replace(/\*\*/g, "^");
+  s = s.replace(/(\d)\s*\*\s*(?=[A-Za-z(])/g, "$1");
+  s = s.replace(/\s*\*\s*/g, "·");
+  s = s.replace(/([\w).²³¹⁰⁴⁵⁶⁷⁸⁹])\s*-\s*(?=[\w(])/g, "$1 − ");
+  s = s.replace(/(^|[(,=])\s*-\s*/g, (_m, p) => (p === "(" || p === "") ? p + "−" : p + " −");
+  return s.replace(/\s{2,}/g, " ").trim();
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
 
 async function loadHealth() {
   try {
@@ -602,134 +639,185 @@ async function loadHealth() {
 }
 
 // --- talking to the agent ----------------------------------------------------
-
-let busy = false;
-async function postAgent(text) {
-  if (busy || !text.trim()) return null;
-  busy = true; errorEl.hidden = true; thinkingEl.hidden = false; sendBtn.disabled = true;
+async function api(path, body) {
+  if (busy) return null;
+  busy = true; errorEl.hidden = true; thinkingEl.hidden = false;
+  sendBtn.disabled = true; launchSend.disabled = true;
   try {
-    const res = await fetch("/api/agent", {
+    const res = await fetch(path, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session: SESSION, text }),
+      body: JSON.stringify(body),
     });
     return await res.json();
   } catch (e) {
     errorEl.hidden = false; errorEl.textContent = "Request failed: " + e.message;
     return null;
   } finally {
-    thinkingEl.hidden = true; busy = false; sendBtn.disabled = false;
+    thinkingEl.hidden = true; busy = false; sendBtn.disabled = false; launchSend.disabled = false;
   }
 }
 
-function firstFocus(r) {
-  const d = (r.directives || []).find((x) => x && x.type === "focus" && Array.isArray(x.target));
-  return d ? d.target : null;
+// --- thread rendering (steps and chat are the SAME thread) -------------------
+function scrollThread() { threadEl.scrollTop = threadEl.scrollHeight; }
+
+function pushUserMsg(text) {
+  thread.push({ role: "user", text });
+  const d = document.createElement("div");
+  d.className = "msg user";
+  d.textContent = text;
+  threadEl.appendChild(d); scrollThread();
 }
-function allVerified(qs) { return !!(qs && qs.length && qs.every((q) => q.verification && q.verification.passed)); }
-function layerLabel(step) {
-  const ls = (sceneData?.layers || []).filter((l) => l.step === step && l.label);
-  return ls.map((l) => l.label).join(" · ");
+function pushAgentMsg(answer, r) {
+  thread.push({ role: "agent", text: answer });
+  const d = document.createElement("div");
+  d.className = "msg agent";
+  const verified = r && !r.model_derived;
+  const srcs = (r && r.grounded_in && r.grounded_in.length)
+    ? `<span class="src">grounded in ${escapeHtml(r.grounded_in.join(", "))}</span>` : "";
+  const warn = (r && r.model_derived) ? `<span class="mderiv">model-derived · unverified</span>` : "";
+  d.innerHTML = `<div class="who">${IC_SPARK}<span>Claude</span>${warn}</div>` +
+    `<div class="txt">${escapeHtml(answer)}${srcs}</div>`;
+  threadEl.appendChild(d); scrollThread();
+}
+function appendStepMsg(step) {
+  thread.push({ role: "tutor", step });
+  const d = document.createElement("div");
+  d.className = "msg tutor";
+  const stage = step.stage ? `<span class="stage">stage ${step.stage.index}/${step.stage.total}</span>` : "";
+  const ver = step.verified ? `<span class="vpill">${IC_CHECK} verified</span>` : "";
+  let lines = "";
+  for (const l of (step.lines || [])) {
+    lines += `<div class="ln ${l.kind || "say"}">${escapeHtml(l.text || "")}</div>`;
+  }
+  d.innerHTML = `<div class="m-lbl"><span class="lab">${escapeHtml(step.title || "")}</span>${stage}${ver}</div>${lines}`;
+  threadEl.appendChild(d); scrollThread();
 }
 
-function renderResult(userText, r) {
-  const isSolve = (r.trace?.tool_sequence || []).some((t) => t.startsWith("solve_"));
+// --- driving the visualization from a walkthrough step ----------------------
+function driveStep(step) {
+  const reveal = step.reveal == null ? maxStep : step.reveal;
+  setStep(reveal);
+  if (step.title === "The full picture") { clearHighlight(); fitCamera(); }
+  else if (step.focus_target) focusOn(step.focus_target, 0.55);
+  else clearHighlight();
+}
+
+// advance the walkthrough one step (the "show me the next step" action) — G18
+function nextStep() {
+  if (!lessonSteps.length) return;
+  if (stepCursor === -1) { startDrawIn(); stepCursor = 0; }
+  else if (stepCursor < lessonSteps.length - 1) stepCursor += 1;
+  else return;
+  const step = lessonSteps[stepCursor];
+  appendStepMsg(step);
+  driveStep(step);
+  updateSuggestions();
+}
+
+function updateSuggestions() {
+  suggestionsEl.innerHTML = "";
+  const chips = [];
+  if (lessonSteps.length) {
+    if (stepCursor === -1) chips.push({ t: "walk me through it", next: true });
+    else if (stepCursor < lessonSteps.length - 1) chips.push({ t: "show me the next step", next: true });
+  }
+  chips.push({ t: "why is this?" });
+  const cur = stepCursor >= 0 ? lessonSteps[stepCursor] : null;
+  chips.push({ t: cur && cur.quantity ? "explain this step" : "what does this show?" });
+  for (const c of chips) {
+    const el = document.createElement("button");
+    el.className = "sugchip" + (c.next ? " primary" : "");
+    el.textContent = c.t;
+    el.onclick = () => { if (c.next) nextStep(); else sendQuestion(c.t); };
+    suggestionsEl.appendChild(el);
+  }
+}
+
+// --- asking a question (answered by the agent, grounded in the current step) -
+async function sendQuestion(text) {
+  text = (text || "").trim();
+  if (!text || !sessionActive) return;
+  pushUserMsg(text);
+  const cur = stepCursor >= 0 ? lessonSteps[stepCursor] : (lessonSteps[0] || null);
+  const step = cur ? { quantity: cur.quantity, focus: cur.focus, focus_target: cur.focus_target,
+                       id: cur.id, title: cur.title } : null;
+  const r = await api("/api/agent", { session: SESSION, text, step });
+  if (!r) return;
   renderTrace(r.trace);
-  if (r.scene && isSolve) {
-    newProblem(r);
-    return;
-  }
-  // follow-up, focus move, or decline — add a beat and jump to it
-  if (!sceneData) {                     // nothing solved yet (e.g. a decline)
-    tutorCard.hidden = false;
-    beats = [{ label: r.declined ? "Note" : "Answer", text: r.answer, focus: "hold",
-               revealStep: maxStep, verified: false, model_derived: r.model_derived }];
-    goBeat(0);
-    return;
-  }
-  const tgt = firstFocus(r);
-  beats.push({ label: "Answer", text: r.answer, focus: tgt ? { target: tgt } : "hold",
-               revealStep: maxStep, verified: !r.model_derived && allVerified(sceneData.quantities),
-               model_derived: r.model_derived });
-  goBeat(beats.length - 1);
+  pushAgentMsg(r.answer, r);
+  const d = (r.directives || []).find((x) => x && x.type === "focus" && Array.isArray(x.target));
+  if (d) focusOn(d.target, 0.55);
 }
 
-function newProblem(r) {
+// --- posing a problem from the launcher (starts a session) ------------------
+async function solveProblem(text) {
+  text = (text || "").trim();
+  if (!text) return;
+  launchNote.hidden = true;
+  const r = await api("/api/agent", { session: SESSION, text });
+  if (!r) return;
+  renderTrace(r.trace);
+  const isSolve = (r.trace && r.trace.tool_sequence || []).some((t) => t.startsWith("solve_"));
+  if (r.scene && isSolve) startSession(r, text);
+  else { launchNote.hidden = false; launchNote.textContent = r.answer || "I couldn't solve that — try rephrasing."; }
+}
+
+const FIELD_HAS = (scene) => (scene.layers || []).some((l) => l.type === "vectors" && FIELD_IDS.has(l.id));
+
+function startSession(r, userText) {
+  fieldHidden = false; clearHighlight();
+  buildScene(r.scene); curScene = r.scene;                 // shows the full scene (G4)
+  lessonSteps = r.walkthrough || [];
+  stepCursor = -1;
+  sessionActive = true;
+  launcher.hidden = true; dock.hidden = false; dockTab.hidden = true;
+  newChatBtn.hidden = false; traceToggle.hidden = false;
+  const hasField = FIELD_HAS(r.scene);
+  fieldToggle.hidden = !hasField; fieldToggle.classList.toggle("on", hasField && !fieldHidden);
+  const hasSurface = (r.scene.layers || []).some((l) => l.type === "surface");
+  contourToggle.hidden = !hasSurface; contourToggle.classList.remove("on");
+  const clbl = contourToggle.querySelector(".label"); if (clbl) clbl.textContent = "Contours";
+  const domainBased = (r.area || r.scene.area) !== "linear-algebra";
+  boundsEl.hidden = !domainBased; boundsFactor = 1; bdLabel.textContent = "bounds ×1";
+  const rawTitle = (r.scene.title || "").trim();
+  dockSub.textContent = (rawTitle ? notation(rawTitle) : (r.area || "")) || "";
+  thread = []; threadEl.innerHTML = "";
+  pushUserMsg(userText);
+  pushAgentMsg(r.answer, r);
+  updateSuggestions();
+}
+
+function newChat() {
+  SESSION = Math.random().toString(36).slice(2);
+  sessionActive = false; lessonSteps = []; stepCursor = -1; curScene = null;
+  dock.hidden = true; dockTab.hidden = true; newChatBtn.hidden = true; boundsEl.hidden = true;
+  fieldToggle.hidden = true; contourToggle.hidden = true; traceToggle.hidden = true; tracePanel.hidden = true;
+  clearContent();
+  thread = []; threadEl.innerHTML = ""; suggestionsEl.innerHTML = "";
+  launcher.hidden = false; launchNote.hidden = true; launchInput.value = "";
+}
+
+// --- expandable bounds (G20) -------------------------------------------------
+async function applyBounds(factor) {
+  boundsFactor = Math.max(0.5, Math.min(4, factor));
+  bdLabel.textContent = "bounds ×" + (boundsFactor % 1 ? boundsFactor.toFixed(1) : boundsFactor);
+  const r = await api("/api/rescale", { session: SESSION, factor: boundsFactor });
+  if (!r || !r.scene) return;
   fieldHidden = false;
-  clearHighlight();
-  buildScene(r.scene);                  // shows the finished scene, self-drawing (G4)
-  showQuantities(r.quantities || []);
-  const area = (r.scene.title || r.area || "").trim();
-  beats = [{ label: area || "Answer", text: r.answer, focus: "fit", revealStep: maxStep,
-             verified: allVerified(r.quantities) && !r.model_derived, model_derived: r.model_derived }];
-  for (const s of (r.walkthrough || [])) {
-    beats.push({ label: s.introduces, text: s.description || layerLabel(s.step) || s.introduces,
-                 focus: { step: s.step }, revealStep: s.step,
-                 verified: !!s.description, model_derived: false });
-  }
-  // end the walkthrough by zooming back out to the whole finished picture
-  if ((r.walkthrough || []).length) {
-    beats.push({ label: "The full picture", focus: "fit", revealStep: maxStep,
-                 text: "Every feature together — rotate, zoom, and explore the finished visual.",
-                 verified: false, model_derived: false });
-  }
-  beatIdx = 0;
-  tutorCard.hidden = false;
-  replayBtn.hidden = false;
-  traceToggle.hidden = false;
-  resultsPanel.hidden = true;
-  const hasField = (r.scene.layers || []).some((l) => l.type === "vectors" && FIELD_IDS.has(l.id));
-  fieldToggle.hidden = !hasField;
-  fieldToggle.classList.toggle("on", hasField && !fieldHidden);
-  // the surface⇄contours switch appears only when there's a surface to reveal; reset to the
-  // grow-from-centre default for each new problem
+  buildScene(r.scene); curScene = r.scene;
+  if (r.walkthrough && r.walkthrough.length) lessonSteps = r.walkthrough;
   const hasSurface = (r.scene.layers || []).some((l) => l.type === "surface");
   contourToggle.hidden = !hasSurface;
-  contourToggle.classList.remove("on");
-  const clbl = contourToggle.querySelector(".label");
-  if (clbl) clbl.textContent = "Contours";
-  goBeat(0);
-}
-
-function goBeat(i) {
-  if (!beats.length) return;
-  beatIdx = Math.max(0, Math.min(beats.length - 1, i));
-  const b = beats[beatIdx];
-  // drive the visualization
-  if (b.focus === "fit") { setStep(b.revealStep); clearHighlight(); fitCamera(); }
-  else if (b.focus === "hold") { setStep(b.revealStep); }
-  else if (b.focus && b.focus.step != null) { focusStep(b.focus.step); }
-  else if (b.focus && b.focus.target) { setStep(b.revealStep); focusOn(b.focus.target, 0.55); }
-  // update the card
-  tutorLabel.textContent = b.label;
-  tutorText.textContent = b.text;
-  tutorVerified.hidden = !b.verified;
-  modelDerived.hidden = !b.model_derived;
-  tutorCounter.textContent = `${beatIdx + 1} / ${beats.length}`;
-  tutorPrev.disabled = beatIdx === 0;
-  tutorNext.disabled = beatIdx === beats.length - 1;
-  tutorDots.innerHTML = "";
-  beats.forEach((_, k) => {
-    const s = document.createElement("span");
-    if (k === beatIdx) s.className = "on";
-    tutorDots.appendChild(s);
-  });
-}
-
-function showQuantities(quantities) {
-  qEl.innerHTML = "";
-  for (const q of quantities) {
-    const v = q.verification;
-    const div = document.createElement("div");
-    div.className = "quantity";
-    div.innerHTML =
-      `<div class="qname">${q.name.replace(/_/g, " ")}</div>` +
-      `<div class="qval">${escapeHtml(q.display)}</div>` +
-      `<div class="badge">✓ verified · residual ${v.residual.toExponential(1)} ≤ ` +
-      `${v.tolerance.toExponential(0)} <span class="prov">via ${q.provenance}</span></div>`;
-    qEl.appendChild(div);
+  const hasField = FIELD_HAS(r.scene);
+  fieldToggle.hidden = !hasField; fieldToggle.classList.toggle("on", hasField && !fieldHidden);
+  if (stepCursor >= 0) {                              // keep the walkthrough position framed
+    startDrawIn();
+    const s = lessonSteps[Math.min(stepCursor, lessonSteps.length - 1)];
+    if (s) driveStep(s);
   }
 }
 
+// --- trace (tool calls) — G7 -------------------------------------------------
 function renderTrace(trace) {
   if (!trace || !trace.calls) { tracePanel.innerHTML = ""; return; }
   const rows = trace.calls.map((c) => {
@@ -743,42 +831,42 @@ function renderTrace(trace) {
     + (rows || '<div class="tcall">answered from the current problem (no tools called)</div>');
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-}
-
-// --- controls ----------------------------------------------------------------
-
-tutorPrev.onclick = () => goBeat(beatIdx - 1);
-tutorNext.onclick = () => goBeat(beatIdx + 1);
-
-replayBtn.onclick = () => { startDrawIn(); beatIdx = 0; goBeat(0); };
+// ---------------------------------------------------------------- controls ----
+launchSend.onclick = () => solveProblem(launchInput.value);
+launchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") solveProblem(launchInput.value); });
+launchChips.querySelectorAll(".ex").forEach((el) => {
+  el.onclick = () => { launchInput.value = el.dataset.q || el.textContent; solveProblem(launchInput.value); };
+});
+sendBtn.onclick = () => { const t = chatInput.value; chatInput.value = ""; sendQuestion(t); };
+chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { const t = chatInput.value; chatInput.value = ""; sendQuestion(t); } });
+newChatBtn.onclick = newChat;
+dockCollapse.onclick = () => { dock.hidden = true; dockTab.hidden = false; };
+dockTab.onclick = () => { dock.hidden = false; dockTab.hidden = true; };
+bdMinus.onclick = () => applyBounds(boundsFactor - 0.5);
+bdPlus.onclick = () => applyBounds(boundsFactor + 0.5);
+bdExpand.onclick = () => applyBounds(Math.max(2, boundsFactor + 1));
 
 fieldToggle.onclick = () => {
   fieldHidden = !fieldHidden;
   fieldToggle.classList.toggle("on", !fieldHidden);
   setStep(currentStep);
 };
-
 // switch the base surface between growing-from-centre and its contours-bloom, and back.
-// Grow-from-centre is the default; clicking drops the surface (fades it out) and blooms the
-// contour rings; clicking again fades the rings out and grows the surface back on.
 contourToggle.onclick = () => {
   if (!surfaceGroup || !contourGroup) return;
   const toContour = surfaceMode !== "contour";
   surfaceMode = toContour ? "contour" : "surface";
   if (toContour) {
     fadeOut(surfaceGroup, () => { surfaceGroup.visible = false; });
-    contourGroup.visible = true; triggerDraw(contourGroup);      // rings bloom from the centre
+    contourGroup.visible = true; triggerDraw(contourGroup);
   } else {
     fadeOut(contourGroup, () => { contourGroup.visible = false; });
-    surfaceGroup.visible = true; triggerDraw(surfaceGroup);      // mesh grows back from the centre
+    surfaceGroup.visible = true; triggerDraw(surfaceGroup);
   }
   contourToggle.classList.toggle("on", toContour);
   const lbl = contourToggle.querySelector(".label");
   if (lbl) lbl.textContent = toContour ? "Surface" : "Contours";
 };
-
 traceToggle.onclick = () => {
   const show = tracePanel.hidden;
   tracePanel.hidden = !show;
@@ -786,25 +874,12 @@ traceToggle.onclick = () => {
   traceToggle.setAttribute("aria-expanded", String(show));
 };
 
-resultsToggle.onclick = () => {
-  const show = resultsPanel.hidden;
-  resultsPanel.hidden = !show;
-  tutorCard.hidden = show;            // swap the two (they share the lower-left slot)
-  resultsToggle.setAttribute("aria-expanded", String(show));
-};
-resultsPanel.addEventListener("click", (e) => {
-  if (e.target === resultsPanel) { resultsPanel.hidden = true; tutorCard.hidden = false; }
+// expose conversation state for tests / the automated checks
+window.__ml.session = () => ({
+  active: sessionActive, threadLen: thread.length,
+  roles: thread.map((m) => m.role), stepCursor,
+  steps: lessonSteps.length, collapsed: dock.hidden && !dockTab.hidden, boundsFactor,
 });
-
-async function sendChat() {
-  const text = chatInput.value.trim();
-  if (!text) return;
-  chatInput.value = "";
-  const r = await postAgent(text);
-  if (r) renderResult(text, r);
-}
-sendBtn.onclick = sendChat;
-chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat(); });
 
 loadHealth();
 animate(); // start the render loop once all module state is initialized

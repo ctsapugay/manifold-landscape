@@ -14,6 +14,7 @@ value stated is one a tool produced (C-VERIFIED-MATH, C-GROUNDED-EXPLANATION).
 from __future__ import annotations
 
 from engine.explain import Explainer
+from engine.notation import to_notation
 from web.problems import solution_for
 
 from .brain import Brain, OrchestrationResult
@@ -82,13 +83,27 @@ class OfflineBrain(Brain):
         else:
             seed = _SEED.get(res.area, "explain this")
         explained = Explainer(sol).answer(seed)
-        title = res.scene.get("title", "")
+        title = to_notation(res.scene.get("title", ""))
         headline = f"{title} — " if title else ""
         return OrchestrationResult(
             answer=headline + explained["answer"],
             scene=res.scene, area=res.area, quantities=res.quantities,
             grounded_in=explained["grounded_in"],
-            walkthrough=res.scene.get("steps", []))
+            walkthrough=res.scene.get("lesson") or res.scene.get("steps", []))
+
+    def answer_step(self, text: str, step: dict, ctx: dict, tracer) -> OrchestrationResult:
+        """Deterministic per-step follow-up (the offline fallback for G17): the grounded
+        Explainer answers, biased to the step's own verified quantity."""
+        desc = ctx.get("current_descriptor")
+        if not desc:
+            return OrchestrationResult(
+                answer="Ask me to solve a problem first, then I can answer questions about a step.",
+                declined=True)
+        ans = Explainer(solution_for(desc).require_verified()).answer_about(
+            text, (step or {}).get("quantity"))
+        return OrchestrationResult(
+            answer=ans["answer"], grounded_in=ans["grounded_in"],
+            quantities=(ctx.get("current_scene") or {}).get("quantities", []))
 
     # --- helpers ---------------------------------------------------------------
 

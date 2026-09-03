@@ -79,6 +79,29 @@ class ClaudeBrain(Brain):
     def reset(self) -> None:
         self.messages = []
 
+    def answer_step(self, text: str, step: dict, ctx: dict, tracer) -> OrchestrationResult:
+        """Answer a per-step follow-up with the live agent (criterion G17), in the running
+        conversation. The step and its verified values are handed to Claude as context so the
+        answer addresses THAT step and is grounded in the computed state; the grounding gate
+        downstream labels anything not tool-verified. Multi-turn: it threads into ``messages``,
+        so the chat is one continuous conversation (G16)."""
+        step = step or {}
+        quantities = (ctx.get("current_scene") or {}).get("quantities", [])
+        facts = "; ".join(f"{q.get('name')} = {q.get('display')}" for q in quantities
+                          if q.get("display"))
+        aug = text
+        if step.get("title"):
+            about = f', which concerns {step.get("quantity")}' if step.get("quantity") else ""
+            aug = (f'[Context: the user is looking at the walkthrough step "{step["title"]}"{about}. '
+                   f'Answer their question about THIS step, grounded ONLY in these verified '
+                   f'values — {facts or "(the current problem\'s verified results)"} — and do not '
+                   f'introduce any number a tool did not produce.]\n\n{text}')
+        out = self.orchestrate(aug, ctx, tracer)
+        # a follow-up answered from context calls no tools and solves nothing — that is not a
+        # decline. It is declined only if no answer text came back at all.
+        out.declined = not bool(out.answer and out.answer.strip())
+        return out
+
     # --- client ----------------------------------------------------------------
 
     def _get_client(self):
@@ -143,5 +166,5 @@ class ClaudeBrain(Brain):
         return OrchestrationResult(
             answer=final_text or "I wasn't able to produce an answer.",
             scene=scene, area=area, quantities=quantities, directives=directives,
-            walkthrough=(scene or {}).get("steps", []) if scene else [],
+            walkthrough=((scene or {}).get("lesson") or (scene or {}).get("steps", [])) if scene else [],
             declined=declined)

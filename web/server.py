@@ -164,12 +164,33 @@ class Handler(BaseHTTPRequestHandler):
             if body.get("reset"):
                 _agent_for(session).reset()
             try:
-                result = _agent_for(session).run(text)
+                step = body.get("step")
+                if step:
+                    # a follow-up aimed at one walkthrough step — grounded in that step's
+                    # verified state, and it must not disturb the session's place (G13)
+                    result = _agent_for(session).answer_step(text, step)
+                else:
+                    result = _agent_for(session).run(text)
                 self._json(200, result.to_dict())
             except Exception as exc:  # never surface a stack trace to the UI (G8)
                 self._json(200, {"answer": f"Something went wrong: {type(exc).__name__}.",
                                  "declined": True, "scene": None, "trace": {},
                                  "quantities": [], "directives": []})
+            return
+        if path == "/api/rescale":
+            # expand (or shrink) the current problem's visualization domain (G20)
+            session = str(body.get("session") or "default")
+            try:
+                factor = float(body.get("factor", 1.0))
+            except (TypeError, ValueError):
+                self._json(400, {"error": "factor must be a number"})
+                return
+            try:
+                res = _agent_for(session).rescale(factor)
+            except Exception as exc:
+                self._json(200, {"scene": None, "error": f"{type(exc).__name__}: {exc}"})
+                return
+            self._json(200, res.to_dict() if res is not None else {"scene": None})
             return
         if path == "/api/ask":
             desc = CATALOG_BY_ID.get(body.get("id")) or body.get("descriptor")
