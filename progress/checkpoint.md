@@ -17,16 +17,19 @@ long, degraded one. This is **progress, not governed content**.
 ---
 
 - **updated:** 2026-09-04
-- **phase:** ✅ **PHASE 4 CODE COMPLETE (G21–G25 MET).** All 25/25 criteria met with evidence;
-  `python3 tools/verify.py` GREEN on 26/26 checks (CHK-001…026); 65 unit tests pass. Phases 1–3
-  (G1–G20) untouched and still met. The finish line's completion gate (criteria met + verify green)
-  is satisfied.
-- **⚠️ ONE GOVERNANCE STEP PENDING CLARA:** the five appended Phase-4 checks (CHK-022…026) are
-  registered and green, but the baseline digest has NOT been re-recorded, so `python3
-  tools/validate.py` reports the expected **`governance/checks`** drift. Clara records it with
-  **`python3 tools/approve.py --baseline`** (constraints/goal digests are unchanged — only the
-  check appends differ, which her `/goal` seed pre-authorized as "appends auto-approved"). The
-  agent attempted the delegated record but the harness classifier blocked it, so it is left to her.
+- **phase:** ✅ **PHASE 4 COMPLETE + LIVE-VERIFIED (G21–G25 MET).** All 25/25 criteria met;
+  `python3 tools/verify.py` GREEN (26/26); 65 unit tests pass; baseline recorded & committed;
+  code committed (not yet pushed — awaiting Clara's OK). Phases 1–3 (G1–G20) untouched.
+- **LIVE full-suite drive done (Clara's bar):** every one of the 39 `suite/agent_tests.json`
+  cases driven through the REAL Claude brain (`.env` key), not the offline path. First drive
+  failed (core 17/20 — a PDE bluffed, "minimize" on the wrong solver, a stray model-derived
+  angle); after hardening (deterministic out-of-scope pre-decline in `Agent.run`; interpreter
+  tool-read injected as a first-turn hint; stricter system prompt) the re-drive is **LIVE 39/39 =
+  100%, protected core 20/20 = 100%**, all out-of-scope declined. Phase-4 flows (animate /
+  simulate / follow-up trace) also driven live and passing. See the 2026-09-04 log entries.
+- **known limitation (not a finish-line gap):** the live agent may gracefully DECLINE to
+  plain-solve some quartics as scalar fields (critical-point verification fails, e.g.
+  `(x^2-1)^2+0.3x+y^2`); the SWEEP on the same landscape still works. Candidate future engine fix.
 - **what shipped (G21–G25):**
   1. **G21** — sessions auto-save to `localStorage`; start-screen list reopens (thread replayed +
      scene re-solved via new `/api/restore` + `Agent.restore`, so follow-ups keep working) and
