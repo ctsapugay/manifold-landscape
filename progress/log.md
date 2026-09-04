@@ -1200,3 +1200,27 @@ reader: state, not narrative.
 - **next:** on credits, re-drive the full suite live + live follow-ups per area + live browser pass;
   then the goal's finish line holds.
 - **blockers:** B1 open.
+
+## 2026-09-04 — Live verification COMPLETE (credits restored)
+
+- **why:** credits were topped up; ran the full live verification the quality goal requires.
+- **programmatic live drive** (`tools/live_eval.py --followups`, real Claude brain over all 39
+  suite cases + per-area follow-ups): first pass 37/39 — the only misses were AO3/AO6 (Rosenbrock)
+  where the model DIVIDED the two verified Hessian eigenvalues to state a condition number (~2500),
+  a model-derived value. GENERAL fix (not a per-problem hack): `OptimizationLandscape.minimum()`
+  now returns a verified `condition_number` (max/min |Hessian eigenvalue|, None when undefined —
+  never inf), surfaced via the enriched payload; prompt forbids arithmetic on returned values.
+  Re-drive: **LIVE CLEAN — 39/39, protected core 20/20 = 100%**, all five areas' follow-ups pass
+  (tool-driven animate/focus included), all 6 out-of-scope declined.
+- **live rendered-app pass** (all five areas, real agent): scalar/optimization (earlier), dynamics
+  (Lorenz animate), optimization sweep (36 runs into basins), vector-fields (F=(−y,x): div 0, curl 2,
+  clean arrow grid, grounded answer), linear-algebra ([[2,1],[1,2]]: circle→ellipse + eigenvectors,
+  and "which direction is stretched most?" drove the highlight to the (1,1) axis with a grounded
+  answer). No console errors; visuals/animations clean.
+- **offline:** verify GREEN (26/26), 100 unit tests pass, governance clean.
+- **result:** the quality goal's bar is met — every suite item driven live with the agent; math
+  correct (verified or labelled), explanations accurate/clear, follow-ups accurate + right-tool,
+  visuals/animations clean — via GENERAL fixes (payload enrichment, focus resolution, scope guard,
+  qualitative-grounding prompt, verified condition number) that improve the agent on any in-scope
+  problem, not just the suite.
+- **blockers:** B1 (credits) RESOLVED.

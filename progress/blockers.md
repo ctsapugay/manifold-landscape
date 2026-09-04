@@ -40,8 +40,9 @@ of what was decided, and stop the same wall being hit twice.
   `BadRequestError 400 — "Your credit balance is too low to access the Anthropic API."`
 - **needs:** Clara to top up credits (Plans & Billing). Buying credits is a financial action the
   agent must not perform.
-- **status:** open
+- **status:** resolved
 - **opened:** 2026-09-04
+- **resolved:** 2026-09-04 — Clara topped up credits; full live verification completed clean (39/39, core 20/20).
 - **progress made before it hit:** full suite driven live 39/39 (core 20/20) earlier; the 4 general
   fixes verified live and correct; scalar-fields + optimization follow-ups verified live (excellent).
   Vector-fields / linear-algebra / dynamical-systems live follow-ups still to re-confirm once credits
