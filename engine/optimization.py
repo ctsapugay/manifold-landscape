@@ -97,6 +97,16 @@ class OptimizationLandscape:
         hf = sp.lambdify(self.field.vars, self.field._hess_expr, "numpy")
         eigs = np.linalg.eigvalsh(np.asarray(hf(*x), dtype=float))
         kind = _classify_hessian(eigs)
+        # Condition number of the Hessian at the minimum: the ratio of the largest to the
+        # smallest curvature. It is the standard measure of how ill-conditioned (elongated)
+        # the bowl is — and hence how slowly gradient descent crawls along the flat direction.
+        # Derived deterministically from the already-verified eigenvalues (never by the model),
+        # so a tutor can state "N times stiffer across than along" with a verified figure.
+        abs_eigs = np.abs(eigs)
+        smallest = float(np.min(abs_eigs))
+        # None (JSON null) when undefined — never inf, which would break JSON / the API.
+        condition_number = (float(np.max(abs_eigs) / smallest)
+                            if smallest > 1e-12 else None)
         return Quantity(
             name=name,
             kind="points",
@@ -105,6 +115,7 @@ class OptimizationLandscape:
                 "f": float(self.field.f(x)),
                 "type": kind,
                 "hessian_eigenvalues": [float(e) for e in eigs],
+                "condition_number": condition_number,
                 "gradient_residual": float(grad_resid),
             },
             display=f"min at {tuple(round(float(c),4) for c in x)}, f={self.field.f(x):.4g} ({kind})",

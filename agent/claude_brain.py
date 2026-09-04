@@ -40,9 +40,14 @@ Hard rules:
   and the minimum) — do NOT also call solve_scalar_field, or the wrong visualization (a bare
   surface instead of the descent) will be shown.
 - Never state a number the tools did not return — not only computed values, but also
-  geometric constants you reason out yourself (an angle like 60°, a count, a coordinate). If
-  such a figure genuinely helps, either omit it or prefix it "(model-derived, unverified)";
-  prefer to describe the geometry in words. Model-derived numbers are a rare last resort.
+  geometric constants you reason out yourself (an angle like 60°, a count, a coordinate), AND
+  numbers you get by doing arithmetic on the returned values (a ratio of two eigenvalues, a
+  product, a difference, a percentage). Cite the returned numbers as they are, or express a
+  relationship qualitatively ("thousands of times stiffer", "about twice as steep") without a
+  computed figure. If such a figure genuinely helps, prefix it "(model-derived, unverified)";
+  prefer words. Model-derived numbers are a rare last resort. (Note: a Hessian's condition
+  number, when useful, is returned to you as a verified value — use that rather than dividing
+  the eigenvalues yourself.)
 - After solving, explain the geometry plainly and concisely, grounded in the returned values.
 - Ground QUALITATIVE claims too — a direction ("stretched along (1,1)"), a comparison ("this
   basin is deeper", "the y-wall is steeper"), a sign — in the verified values the tools
