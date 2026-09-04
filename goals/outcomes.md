@@ -63,10 +63,20 @@ When this exists, the following are true that are not true today:
    visualization takes the full space. Where a visualization is drawn over a domain, the user can
    **expand its bounds** and see the geometry re-computed (still tool-verified) over more space.
 7. The experience is **transparent and responsive**: the user can toggle a view of the
-   agent's tool-calls (what it computed), a visible indicator shows while the agent works,
-   and the visualization stays smooth while it thinks.
-8. The whole thing reads as a **polished product** that demonstrates mathematical depth and
-   agentic-AI craft — of a standard Clara is glad to show a recruiter.
+   agent's tool-calls (what it computed) — and that view **reliably reflects the tools that
+   ran**, consistently across a solve, a follow-up, or a simulation — a visible indicator shows
+   while the agent works, and the visualization stays smooth while it thinks.
+8. Chat sessions are **saved automatically** and are the user's to manage: a past session can
+   be reopened (restoring its conversation and the visualization it explored) and deleted, all
+   locally on the user's machine.
+9. The agent can **drive motion**: through its tools it triggers step-by-step playback and
+   animation in the 3-D — playing a trajectory, animating a process — both to illustrate its
+   explanations and on request; and it can **run a simulation or sweep** relevant to the problem
+   (e.g. a multi-start descent sweep to see which basin wins most often) and play the actual runs
+   back animated, with every reported outcome tool-computed and verified or labelled model-derived
+   (C-VERIFIED-MOTION).
+10. The whole thing reads as a **polished product** that demonstrates mathematical depth and
+    agentic-AI craft — of a standard Clara is glad to show a recruiter.
 
 ## Non-goals
 

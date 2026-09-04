@@ -193,3 +193,52 @@ a criterion with `covers:`.
 - **check:** In the running app, expanding the bounds on a domain-based visualization (a surface, a vector field, a phase portrait) re-renders it over a larger region with verified geometry, while the control does not appear where it has no meaning (e.g. a unit-circle→ellipse linear-algebra scene). An automated check in `checks/registry.md` confirms that re-solving a descriptor over an expanded domain yields a larger, still-verified scene and that the control is gated to domain-based areas.
 - **state:** met
 - **evidence:** 2026-09-03 — A bounds control (`− / bounds ×N / + / expand`) re-solves the current problem over its domain scaled by a factor: `Agent.rescale` (`agent/agent.py`) expands the base domain and re-runs `solve_descriptor`, so the enlarged scene is verified exactly like any solve (C-VERIFIED-MATH); the `/api/rescale` endpoint (`web/server.py`) drives it, and the frontend gates the control off for linear-algebra (`boundsEl.hidden = !domainBased`). `rescale` returns None for linear-algebra (no domain). **CHK-021** (`tools/check_expandable_bounds.py`) drives the real re-solve for all four domain-based areas (scalar-fields, optimization, vector-fields, dynamical-systems), confirming each expanded scene is genuinely larger and fully verified, that linear-algebra is not rescalable, and that the frontend gates + wires the control. Green under `python3 tools/verify.py`. Browser-verified live: the paraboloid `f = x²+y²` visibly grew to a broader bowl at "bounds ×3", the Lorenz domain expanded at ×2 (re-solved, verified), and the control was absent for the matrix `A = [[2,1],[1,2]]`.
+
+---
+
+> **Phase 4 — persistence, agent-driven animation, and consistency (added 2026-09-03).** Criteria
+> G21–G25 open a new phase. After walking the Phase-3 app, Clara asked for (a) chat sessions to be
+> saved automatically and be reopenable and deletable, and (b) the agent to have tools that drive
+> step-by-step playback and animation in the 3-D — playing trajectories, animating processes, and
+> running simulations/sweeps on request (e.g. a multi-start gradient-descent sweep to see which
+> basin wins most often) with an animated, step-by-step play of the actual computed runs. She also
+> hit two quality bugs to fix: interleaving a question mid-walkthrough left steps repeated and the
+> visual confused afterward, and the "Tool calls" view showed nothing even when tools had run
+> (inconsistent). The goal re-opens (`state: approved`) until G21–G25 are met with evidence and the
+> suite is green. Nothing already met (G1–G20) is weakened; all new motion/simulation stays
+> tool-computed and verified or labelled (C-VERIFIED-MATH, C-VERIFIED-MOTION).
+
+## G21 — Chat sessions are saved automatically and managed by the user
+
+- **criterion:** A user's chat sessions are saved automatically as they work, so a past session can be reopened later — restoring its conversation and the visualization it was exploring — and the user can delete a session they no longer want; the saved sessions live locally on the user's machine (C-LOCAL) and remain the user's to remove.
+- **check:** In the running app, work a problem, then reopen the app (or a session list) and confirm the past session is available and reopens with its conversation restored; delete a session and confirm it is gone and does not return. An automated slice in `checks/registry.md` confirms sessions are persisted, listed, reopened, and deleted (locally).
+- **state:** unmet
+- **evidence:**
+
+## G22 — The agent can drive step-by-step playback and animation in the 3-D through tools
+
+- **criterion:** The agent has tools that trigger step-by-step playback and animation in the three-dimensional view — playing a trajectory's motion, stepping an evolution forward, animating a process — and it uses them both to illustrate its own explanations and to fulfil a user's request to see something move; every quantity such an animation depends on stays tool-computed and verified, or is labelled model-derived (C-VERIFIED-MATH, C-VERIFIED-MOTION).
+- **check:** Over scripted requests where motion aids understanding (e.g. "animate the trajectory", "play the descent path"), the agent issues a recorded playback/animation directive that the view carries out, and the motion follows a verified quantity (an integrated trajectory, a descent path). An automated check in `checks/registry.md` exercises the agent's animation tools and confirms each directive is grounded in verified state and well-formed.
+- **state:** unmet
+- **evidence:**
+
+## G23 — On request, the agent runs a simulation and plays it back animated, grounded in verified computation
+
+- **criterion:** The user can request a simulation or sweep relevant to the problem — for example, a multi-start gradient-descent sweep across a landscape to see which basin attracts most often — and receive an animated, step-by-step playback of the actual runs, with every reported outcome (which basin wins, how often) tool-computed and independently verified; the model orchestrates deterministic tools to run and summarise the simulation and never invents its results (C-VERIFIED-MATH, C-VERIFIED-MOTION).
+- **check:** For a representative simulation request (a multi-start descent sweep on a landscape with more than one basin), the agent runs it through deterministic tools, reports a verified outcome (per-basin counts) and drives an animated playback of the runs; the reported outcome carries a passing verification record and the playback directive is well-formed. An automated check in `checks/registry.md` exercises the simulation tool and confirms its results are verified.
+- **state:** unmet
+- **evidence:**
+
+## G24 — The walkthrough stays coherent when questions are interleaved between steps
+
+- **criterion:** When the user asks a question in the middle of a walkthrough — which may move or highlight the view — the walkthrough continues coherently afterward: the next step is the correct next one (no step is repeated or skipped), and the visualization returns to a clear state consistent with the current step rather than a confused or doubled-up overlay.
+- **check:** In the running app, start a walkthrough, ask a question between steps (letting it move the view), then continue: confirm the following step is the right next step (not a repeat), and the visual is coherent for that step. An automated slice in `checks/registry.md` guards the step sequencing and reveal state across interleaved questions.
+- **state:** unmet
+- **evidence:**
+
+## G25 — The tool-call view reliably reflects the tools that were used
+
+- **criterion:** Whenever the agent computes something by calling tools, the inspectable tool-call view shows those calls with their provenance and verification; it does not present an empty trace when tools were in fact run, and it behaves consistently whether the user solved a problem, asked a follow-up, or ran a simulation, with a reply that legitimately used no tools shown as answered-from-context rather than looking broken.
+- **check:** Over a set of requests that do call tools (a solve, a grounded follow-up that drives the view, a simulation), the recorded and displayed trace consistently lists the calls with provenance and verification; a genuinely tool-free reply is labelled as answered from the current problem rather than blank. An automated check in `checks/registry.md` confirms the trace is populated whenever tools ran, across those request types.
+- **state:** unmet
+- **evidence:**

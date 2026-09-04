@@ -329,3 +329,24 @@ registry digest change) — WITHOUT weakening what they assert (the behaviours t
 G7/G10/G14 must still hold). CHK-014's whole-set quality gate must stay green through the rebuild.
 -->
 
+<!--
+PHASE 4 (2026-09-03, persistence · agent-driven animation · consistency). Criteria G21–G25 are
+UNMET and open new work. Constraint C-VERIFIED-MOTION was added (project.md): shown motion and
+simulation outcomes must trace to verified computation or be labelled. The worker REGISTERS these
+checks as each lands (appends auto-approved; keep each deterministic + offline — C-LOCAL — except
+where a browser slice is needed, which pairs with an app-confirmed evidence line like G7/G10/G14):
+  - CHK-0NN (G21) — chat sessions persist locally, list, reopen (conversation restored) and delete.
+  - CHK-0NN (G22) — the agent's animation/playback tools issue well-formed directives grounded in a
+    verified quantity (an integrated trajectory, a descent path).
+  - CHK-0NN (G23) — a simulation/sweep tool (e.g. multi-start descent) runs through the engine,
+    returns a VERIFIED outcome (per-basin counts) and a well-formed animated playback.
+  - CHK-0NN (G24) — step sequencing stays coherent across an interleaved question (next step is the
+    correct next one, no repeat/skip; reveal state consistent) — regression guard for the bug Clara hit.
+  - CHK-0NN (G25) — the tool-call trace is populated whenever tools ran, across a solve, a grounded
+    follow-up that drives the view, and a simulation (the follow-up path must carry its trace) — the
+    other bug Clara hit.
+New/changed engine + agent tools (a trajectory-playback tool, a simulation/sweep tool) go through the
+verified Quantity path (C-VERIFIED-MATH, C-VERIFIED-MOTION) — build a tool, don't let the model
+compute or fabricate motion. Do NOT weaken G1–G20 or narrow CHK-014.
+-->
+

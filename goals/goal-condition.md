@@ -10,6 +10,14 @@ agent's to soften: see `constraints/defaults.md` (C-GOVERNED-CHANGE) and
 ## Status
 
 - **state:** approved
+- **reopened:** 2026-09-03 by Clara — **Phase 4: persistence, agent-driven animation, and
+  consistency.** After walking the Phase-3 app, Clara asked for chat sessions to be saved
+  automatically and be reopenable and deletable; for the agent to have tools that drive
+  step-by-step playback and animation in the 3-D and run simulations/sweeps on request (e.g. a
+  multi-start descent sweep animated step by step); and for two quality bugs to be fixed — a
+  mid-walkthrough question left steps repeated and the visual confused, and the tool-call view
+  showed nothing even when tools had run. This adds the constraint **C-VERIFIED-MOTION** and
+  criteria **G21–G25**; nothing already met (G1–G20) is weakened.
 - **reopened:** 2026-09-03 by Clara — **Phase 3: the conversation redesign.** Unify the
   explanation and the chat into a single conversation thread; answer follow-ups with the AI agent
   itself (a Phase-2 gap — they were answered by the deterministic explainer even with the live
@@ -66,7 +74,13 @@ prompts (including advancing to the next step) keep common moves a click away, a
 conversation can be collapsed so the visualization takes the full space — opened from a single
 start state that a "new chat" returns to. Where a visualization is drawn over a domain, the user
 can **expand the bounds** and see the geometry re-computed (still tool-verified) over the larger
-region. The agent's tool use is **inspectable**, and the visualization stays responsive while it
+region. Chat sessions are **saved automatically** and the user can reopen or delete them; the
+agent can **drive step-by-step playback and animation** in the 3-D through its tools — playing a
+trajectory, animating a process, or running a **simulation or sweep on request** (e.g. a
+multi-start descent sweep to see which basin wins most often) with an animated play of the actual
+runs — and every animated or simulated result stays tool-computed and verified or is labelled
+model-derived (C-VERIFIED-MOTION). The agent's tool use is **inspectable** and consistently
+reflects the tools actually run, and the visualization stays responsive while it
 thinks. It is built to make that geometry genuinely understandable and to demonstrate both
 mathematical depth and agentic-AI craft, to a standard suitable as portfolio work.
 
