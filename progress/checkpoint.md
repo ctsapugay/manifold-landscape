@@ -16,44 +16,27 @@ long, degraded one. This is **progress, not governed content**.
 
 ---
 
-- **updated:** 2026-09-04 (quality-hardening round)
-- **phase:** 🔨 **QUALITY-HARDENING GOAL in progress — BLOCKED on API credits (B1).** New goal from
-  Clara: drive the WHOLE suite LIVE and verify math, explanations, visuals, animations, and
-  follow-ups are all correct/clear/clean/relevant — with GENERAL fixes only (no test-targeted
-  hacks; the agent must be good on ANY in-scope problem). General fixes are DONE + committed +
-  pushed + offline-verified; remaining LIVE re-verification is blocked (credits exhausted).
-- **prior state (still true):** Phase 4 (G21–G25) complete; 25/25 criteria met; verify GREEN
-  (26/26); baseline recorded; validate clean; G1–G20 untouched. 100 unit tests pass (was 65).
-- **general fixes this round (committed a2fc7c3; all 6 verified offline, #1/#2/#5 also live before
-  credits ran out):**
-  1. ClaudeBrain tool-result payload now carries each verified quantity's KEY value (compacted;
-     long arrays summarised) → the model grounds directions/comparisons (eigenvectors, basin
-     depths, Hessian eigenvalues) instead of guessing. Fixed AL1 "45°" model-derived guess.
-  2. `focus_view` resolves linear-algebra directions (eigenvector / most-stretched / principal /
-     singular axes). Fixed the failed "which direction is stretched most?" focus.
-  3. Deterministic out-of-scope guard extended to symbolic algebra (factor/roots/solve-for-x);
-     `Agent.run` declines before the model can bluff. Fixed AX6.
-  4. System prompt: ground qualitative claims in provided values; one solve_ tool per problem;
-     drive the right tool to SHOW not just tell.
-  5. `run_simulation` carries its verified sweep quantity on the scene → "which basin is deeper?"
-     is grounded (fixed the old "exactly equal" error).
-  6. ClaudeBrain no longer false-declines a tool-free contextual answer.
-  Locked in by 35 offline regression tests in `tests/test_agent_quality.py` (under CHK-007).
-- **verified so far:** LIVE full suite (before credits) core 20/20=100%; the 4 key fixes verified
-  LIVE + correct; scalar+optimization LIVE follow-ups excellent. OFFLINE browser VISUAL pass across
-  all 5 areas + 3D SVD ellipsoid + Phase-4 animate/sweep: clean, no console errors (visuals are
-  brain-independent, so this dimension is fully covered offline).
-- **⚠️ BLOCKED (B1):** LIVE re-verification of vector-fields/linalg/dynamics follow-ups + a full
-  live re-drive confirming the fixes hold suite-wide + a live rendered-app pass all need API
-  credits. **Clara: top up credits (Plans & Billing).** Buying credits is a financial action the
-  agent must not take.
-- **note:** two nondeterministic labelled-model-derived cases (AO3/AO6 on some runs) are
-  constraint-compliant (always labelled, never shown as verified) and reduced by fix #1.
-- **known limitation (candidate future engine fix):** the agent may gracefully DECLINE to
-  plain-solve some quartics as scalar fields (critical-point verification fails, e.g.
-  `(x^2-1)^2+0.3x+y^2`); the SWEEP on the same landscape still works.
-- **HOW TO RUN:** live `./.venv/bin/python web/server.py` → :8765 (needs API credits!); offline
-  `ANTHROPIC_API_KEY="" python3 web/server.py` → :8770; checks `python3 tools/verify.py`.
-- **next when credits return:** re-drive the full suite live (fixes hold, core 100%, out-of-scope
-  declined); live follow-up drive for vector-fields/linalg/dynamics; live rendered-app browser pass.
-- **open blockers:** B1 — API credits exhausted (blocks live re-verification).
+- **updated:** 2026-09-04 (quality goal — COMPLETE)
+- **phase:** ✅ **QUALITY-HARDENING GOAL MET.** The full suite is driven LIVE through the real
+  Claude agent and verified on every dimension: **LIVE 39/39, protected core 20/20 = 100%**,
+  all five areas' follow-ups correct with the right tool-driven visuals, all out-of-scope
+  declined — `tools/live_eval.py --followups` reports **LIVE CLEAN**. Offline verify GREEN
+  (26/26), 100 unit tests. All fixes are GENERAL (help any in-scope problem), no test-targeted hacks.
+- **general fixes that got it there (all committed + pushed earlier + this round):**
+  1. enriched model payload with each verified quantity's key value (grounds directions/comparisons);
+  2. `focus_view` resolves linear-algebra directions (eigenvector/most-stretched/principal/singular);
+  3. deterministic out-of-scope guard incl. symbolic algebra (PDE/heat, integrals, factoring, …);
+  4. system prompt: ground qualitative claims + no arithmetic on returned values + one solver + drive
+     the right tool to show;
+  5. `run_simulation` carries its verified sweep quantity (grounded basin comparisons);
+  6. verified Hessian **condition_number** in `minimum()` (stops the model dividing eigenvalues);
+  7. no false-decline of tool-free contextual answers.
+- **live rendered-app pass:** all five areas render cleanly (no console errors); animate/sweep play;
+  focus follow-ups drive the right feature. Screenshots captured this session.
+- **verification is repeatable:** `./.venv/bin/python tools/live_eval.py --followups` (needs credits)
+  re-runs the whole live check in one command; it reports BLOCKED (not a false pass) if credits lapse.
+- **regression net:** 35 offline tests in `tests/test_agent_quality.py` (under CHK-007) lock the fixes.
+- **HOW TO RUN:** live `./.venv/bin/python web/server.py` → :8765; offline `ANTHROPIC_API_KEY=""
+  python3 web/server.py` → :8770; checks `python3 tools/verify.py`; live eval as above.
+- **git:** work committed; unpushed commits await Clara's OK to push (she asks before pushing).
+- **open blockers:** none (B1 credits resolved).
