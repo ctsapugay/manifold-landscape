@@ -171,6 +171,24 @@ def _resolve_feature(scene: dict, feature: str, index: int = 0):
         for l in scene.get("layers", []):
             if l["id"].startswith("trajectory"):
                 return l["data"]["end"], l["id"]
+    # linear-algebra invariant / principal directions (eigenvectors, singular axes)
+    if any(k in feature for k in ("eigenvector", "invariant", "stretch", "principal",
+                                  "singular", "axis", "direction")):
+        want_min = any(k in feature for k in ("least", "smallest", "min", "shrink", "compress"))
+        eig = layers.get("eigenvectors")
+        if eig and eig.get("data", {}).get("arrows"):
+            arrows = eig["data"]["arrows"]
+            key = lambda z: abs(z.get("eigenvalue", 0.0))
+            a = (min if want_min else max)(arrows, key=key) if any(
+                k in feature for k in ("most", "largest", "biggest", "max", "least",
+                                       "smallest", "min")) else arrows[min(index, len(arrows) - 1)]
+            return a.get("image") or a.get("vector"), "eigenvectors"
+        sax = layers.get("singular_axes")
+        if sax and sax.get("data", {}).get("arrows"):
+            arrows = sax["data"]["arrows"]
+            key = lambda z: abs(z.get("singular_value", 0.0))
+            a = (min if want_min else max)(arrows, key=key)
+            return a.get("vector"), "singular_axes"
     if "origin" in feature:
         return [0.0, 0.0, 0.0], None
     return None, None
@@ -316,10 +334,12 @@ def _t_simulation(ctx, expr: str = "", domain=None, starts_per_axis: int = 5,
     sq = sweep.to_dict()
     sq["value"] = {"basins": sweep.value["basins"], "winner": sweep.value["winner"],
                    "n_runs": sweep.value["n_runs"]}
+    # carry the verified sweep result ON the scene, so a follow-up about the sweep (e.g. "which
+    # basin is deeper?") is grounded in the basins' verified depths, not guessed.
+    scene["quantities"] = [sq]
     return ToolResult(ok=True, tool="run_simulation", area=scene.get("area", ""),
                       descriptor=sdesc, scene=scene,
-                      quantities=[sq] + scene.get("quantities", []),
-                      directive=directive, summary=sweep.display)
+                      quantities=[sq], directive=directive, summary=sweep.display)
 
 
 class ToolRegistry:

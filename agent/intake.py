@@ -35,6 +35,9 @@ _OUT_OF_SCOPE = (
     ("probability", "statistic", "bayes", "random variable", "distribution"),
     ("partial differential", "pde", "heat equation", "wave equation", "navier"),
     ("prime number", "factorial", "combinatoric", "number theory"),
+    # symbolic algebra (factoring, root-finding, equation-solving) — not geometry
+    ("factor the", "factorise", "factorize", "factoring", "roots of the polynomial",
+     "polynomial roots", "solve for x", "solve for y"),
     ("weather", "stock", "recipe", "translate"),
     ("prove", "theorem", "proof by"),
 )

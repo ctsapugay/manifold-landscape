@@ -44,8 +44,15 @@ Hard rules:
   such a figure genuinely helps, either omit it or prefix it "(model-derived, unverified)";
   prefer to describe the geometry in words. Model-derived numbers are a rare last resort.
 - After solving, explain the geometry plainly and concisely, grounded in the returned values.
+- Ground QUALITATIVE claims too — a direction ("stretched along (1,1)"), a comparison ("this
+  basin is deeper", "the y-wall is steeper"), a sign — in the verified values the tools
+  returned (each quantity's value is given to you). Do not assert a direction or comparison you
+  cannot read off those values; if the value you'd need was not computed, say what would settle
+  it rather than guessing.
 - When a specific feature would aid understanding (e.g. the user asks "where is the
-  minimum?"), call focus_view to drive the 3-D view to it.
+  minimum?", "which direction is stretched most?", "animate the trajectory"), call the right
+  tool to drive the view — focus_view to point at a feature, animate_motion to play a
+  trajectory/descent, run_simulation for a sweep — so the explanation is shown, not just told.
 - If a request is outside the five areas, say so briefly and offer the nearest in-scope idea.
   Do not fabricate an answer.
 - Your reply is shown in a compact UI card, so write PLAIN PROSE: no Markdown (no #, *, -,
@@ -54,8 +61,31 @@ Hard rules:
 Keep answers to two or three sentences unless asked for more."""
 
 
+def _compact(value, _depth=0):
+    """A model-facing form of a verified value: keep scalars/short lists, summarise long
+    point arrays (trajectories, descent paths) so the model gets the KEY verified facts —
+    eigenvector directions, critical-point coordinates, equilibria, divergence/curl, basin
+    counts — without the bulky geometry. This is what lets the model ground directional and
+    comparative claims in verified data instead of guessing (C-VERIFIED-MATH)."""
+    if isinstance(value, bool) or value is None or isinstance(value, (int, float, str)):
+        return value
+    if isinstance(value, dict):
+        if _depth >= 4:
+            return "…"
+        return {k: _compact(v, _depth + 1) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        # a long list of points/rows is a sampled curve — summarise it, don't dump it
+        if len(value) > 8 and all(isinstance(x, (list, tuple, int, float)) for x in value):
+            first, last = _compact(value[0], _depth + 1), _compact(value[-1], _depth + 1)
+            return {"n": len(value), "first": first, "last": last}
+        return [_compact(v, _depth + 1) for v in value[:8]]
+    return str(value)
+
+
 def _tool_result_payload(res) -> dict:
-    """A compact, model-facing summary of a tool result (no bulky geometry arrays)."""
+    """A compact, model-facing summary of a tool result. Includes each verified quantity's
+    KEY values (compacted) so the model can explain the geometry accurately — directions,
+    coordinates, comparisons — grounded in verified data rather than inventing it."""
     if not res.ok:
         return {"ok": False, "error": res.error}
     payload = {
@@ -63,7 +93,8 @@ def _tool_result_payload(res) -> dict:
         "quantities": [
             {"name": q.get("name"), "display": q.get("display"),
              "provenance": q.get("provenance"),
-             "verified": q.get("verification", {}).get("passed")}
+             "verified": q.get("verification", {}).get("passed"),
+             "value": _compact(q.get("value"))}
             for q in res.quantities
         ],
     }
@@ -188,7 +219,12 @@ class ClaudeBrain(Brain):
         area = tracer.last_solve.area if tracer.last_solve else ctx.get("area", "")
         quantities = (tracer.last_solve.scene.get("quantities", [])
                       if tracer.last_solve else (ctx.get("current_scene") or {}).get("quantities", []))
-        declined = tracer.last_solve is None and not any(c.ok for c in tracer.trace.calls)
+        # A turn is a decline only if nothing came back at all: no answer text, no solve, and
+        # no successful tool call. A follow-up answered from context (real text, no tool) is a
+        # valid answer, not a decline.
+        declined = (not (final_text and final_text.strip())
+                    and tracer.last_solve is None
+                    and not any(c.ok for c in tracer.trace.calls))
         return OrchestrationResult(
             answer=final_text or "I wasn't able to produce an answer.",
             scene=scene, area=area, quantities=quantities, directives=directives,
