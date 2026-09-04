@@ -1135,3 +1135,34 @@ reader: state, not narrative.
 - **next:** none open. If desired, a live rendered-app browser pass for felt UX. Do not work past
   the finish line.
 - **blockers:** none.
+
+## 2026-09-04 — LIVE RENDERED-APP pass (venv server + real Claude, :8765)
+
+- **why:** Clara asked for a live rendered-app pass after the programmatic live drive.
+- **setup:** `./.venv/bin/python web/server.py` (brain=claude, model claude-sonnet-4-6); driven in
+  the browser at localhost:8765.
+- **confirmed in the rendered app, all through the LIVE agent:**
+  - Solve "show me the Lorenz attractor" → butterfly drawn on; grounded answer citing verified
+    values (±8.485 saddle-foci, 0.000001→23.4 separation, +0.339/t Lyapunov). 17 lesson steps.
+  - **G24** walkthrough + interleaved LIVE question ("why is the origin a saddle?"): cursor stayed
+    put during the question, advanced correctly after; no duplicated tutor cards; clean visual.
+  - **G22** "animate the motion" chip → live agent called `animate_motion`; marker replays the
+    trajectory; Tool-calls panel shows `animate_motion(...) ✓ verified · via scipy.integrate.solve_ivp`.
+  - **G23** launcher "run a multi-start descent sweep on (x^2-1)^2+0.3x+y^2" → live `run_simulation`;
+    36 run markers descend into two basins over the double well; grounded answer (left well x≈−1.04,
+    right x≈0.96); trace shows run_simulation.
+  - **G25** Tool-calls panel populated per turn with provenance + verification; answered-from-context
+    on a plain question (not blank).
+  - **G21** two sessions listed on the start screen; reopen restored the thread + re-solved scene and
+    a live follow-up still worked; delete 2→1; **survived a full page reload** (localStorage).
+- **⚠️ limitation found (worth flagging, honest):** after REOPENING a sweep session (which re-solves
+  as an optimization landscape with a single computed minimum), a live follow-up "which basin is
+  deeper?" answered "exactly equal" — WRONG for this tilted well (the 0.3x term makes the left
+  basin lower by ~0.6). Cause: the reopened context holds one minimum, not the sweep's basin data,
+  and the grounding gate guards NUMBERS, not qualitative claims, so the model's qualitative mistake
+  passed. Pre-existing class of issue (qualitative grounding), surfaced by the sweep-reopen context
+  gap; not a G21–G25 criterion failure and not a fabricated verified value. Candidate follow-up:
+  carry sweep basin data into the reopened context, and/or extend grounding to qualitative claims.
+- **state:** finish line holds (25/25 met, verify GREEN 26/26, 65 tests). Live server left running on
+  :8765 for Clara.
+- **blockers:** none.
