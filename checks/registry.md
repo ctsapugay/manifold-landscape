@@ -242,6 +242,46 @@ that must keep succeeding; the worker may still freely append more problems (to
 - **waived:**
 - **waived-by:**
 
+## CHK-022 — Chat sessions persist locally, list, re-open and delete
+
+- **covers:** G21
+- **run:** python3 tools/check_session_persistence.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-023 — The agent's animation tools drive verified playback
+
+- **covers:** G22, C-VERIFIED-MOTION
+- **run:** python3 tools/check_agent_animation.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-024 — A simulation/sweep runs through the engine, verified, and plays back
+
+- **covers:** G23, C-VERIFIED-MOTION
+- **run:** python3 tools/check_agent_simulation.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-025 — The walkthrough stays coherent across interleaved questions
+
+- **covers:** G24
+- **run:** python3 tools/check_walkthrough_coherence.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
+## CHK-026 — The tool-call trace is populated whenever tools ran
+
+- **covers:** G25
+- **run:** python3 tools/check_trace_consistency.py
+- **status:** active
+- **waived:**
+- **waived-by:**
+
 <!--
 Note on G2 (C-INTERACTIVE). THRESHOLD: sustained 60 fps during manipulation, i.e. a frame
 cost at or below 16.7 ms/frame, on Clara's development machine. CHK-002 is the automated

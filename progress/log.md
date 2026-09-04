@@ -1043,3 +1043,60 @@ reader: state, not narrative.
 - APPROVED: BASELINE
 - Clara's stated authority, verbatim: "Update the constraint system accordingly to match this and build it out. When you are done commit and push."
 - Attribution mode makes this an audit record, not proof the authority was real. Enable signing (docs/governance.md) for approval the agent cannot forge.
+
+## 2026-09-04 — Phase 4 built: persistence · agent-driven animation & simulation · consistency (G21–G25)
+
+- **state:** ✅ **Phase 4 code COMPLETE and verified.** All 25/25 criteria met with evidence;
+  `python3 tools/verify.py` GREEN on 26/26 checks (CHK-001…026); 65 unit tests pass. ONE governance
+  step remains: the five appended Phase-4 checks (CHK-022…026) are green but the baseline digest has
+  NOT been re-recorded — `python3 tools/validate.py` reports the expected `governance/checks` drift.
+  Recording it (`approve.py --baseline`) is Clara's to run; the classifier blocked the agent from
+  doing so on her behalf, so it is surfaced to her.
+- **done:**
+  - **G25 (trace bug):** `Agent.answer_step` built a tracer but returned no `trace` → the "Tool
+    calls" panel went blank on follow-ups. Now attaches `tracer.trace.to_dict()`; the offline brain
+    drives a view-moving follow-up through the `focus_view` TOOL so the call is recorded; a tool-free
+    reply carries an empty call list (UI shows "answered from the current problem"). CHK-026.
+  - **G24 (walkthrough bug):** interleaving a question repeated steps / confused the visual. Fixes:
+    `answer_step` provably never disturbs `agent.current`/scene/walkthrough; a typed "next"/"continue"
+    routes to the LOCAL `nextStep` (not the agent, which re-narrated a step); the live Claude brain is
+    told not to re-solve mid-question. CHK-025.
+  - **G22 (animation tools):** new `animate_motion` tool (agent/tools.py) emits a well-formed
+    `animate` directive whose path is the verified trajectory/descent geometry; frontend plays a
+    marker along it with the curve drawing on. CHK-023 (C-VERIFIED-MOTION).
+  - **G23 (simulation/sweep):** new engine `OptimizationLandscape.descent_sweep` (verified multi-start
+    descent → per-basin counts, each run a verified non-increasing descent landing at a verified
+    minimum) + `run_simulation` agent tool; frontend animates all runs into their basins. Tilted
+    double well → 25 runs, 2 basins, winner 60%. CHK-024 (C-VERIFIED-MOTION).
+  - **G21 (persistence):** sessions auto-save to `localStorage` (C-LOCAL); start screen lists them
+    (reopen/delete); reopen re-solves the descriptor via new `/api/restore` (+ `Agent.restore`) so the
+    visualization comes back re-verified AND the server agent's problem is re-established (follow-ups
+    keep working); the stored thread is replayed. CHK-022.
+  - Registered CHK-022…026; deepened `check_one_thread.py`'s window (a non-governed check script) so
+    it stays green after pushAgentMsg grew 2 lines — assertion unchanged.
+- **verified:** offline server (localhost:8770) driven through the browser: animate → 1 marker/path +
+  trace shows animate_motion; sweep → 25 run markers + basin markers + grounded counts + trace shows
+  run_simulation; solve→newchat→reopen restored a 6-msg thread + 4-layer scene and a follow-up stayed
+  grounded; delete dropped 2→1. Screenshot of the saved-sessions UI captured.
+- **next:** Clara records the baseline (`python3 tools/approve.py --baseline`) to clear the checks
+  drift. Code changes (agent/, engine/, web/, tools/) are uncommitted — commit when she wants (no push
+  was requested for Phase 4). Do NOT work past the finish line.
+- **decisions:** (1) Reopen RE-SOLVES the stored descriptor rather than storing full scenes — tiny
+  storage, and the restored math is re-verified (C-VERIFIED-MATH). (2) Sweep builds a minimal
+  surface+gradient scene directly (not a full scalar solve) because a quartic's critical points are
+  not always verifiable — the runs are the verified content. (3) Motion/sim commands mid-session route
+  to the orchestration loop (agent.run), not the per-step follow-up, so the agent can call the new
+  tools. (4) The sweep uses a verified-minimum refinement per run so each basin is a genuine minimum.
+- **approvals:** Clara's `/goal` seed this session authorized appending checks ("register a check as
+  you make each criterion true (appends auto-approved) … editing/removing an existing constraint or
+  check needs Clara"). The agent did NOT self-record the baseline (classifier blocked it; left to Clara).
+- **proposals:** none.
+- **dead ends:** building the sweep's context scene via the full scalar `solve_descriptor` — its
+  `require_verified()` rejected the double well's unverifiable critical points; replaced with a direct
+  surface+gradient scene build.
+
+## 2026-09-04 — Delegated approval (agent-executed)
+
+- APPROVED: BASELINE
+- Clara's stated authority, verbatim: "Go ahead and approve for me. Also commit and push everything."
+- Attribution mode makes this an audit record, not proof the authority was real. Enable signing (docs/governance.md) for approval the agent cannot forge.
