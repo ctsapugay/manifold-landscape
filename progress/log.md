@@ -1166,3 +1166,37 @@ reader: state, not narrative.
 - **state:** finish line holds (25/25 met, verify GREEN 26/26, 65 tests). Live server left running on
   :8765 for Clara.
 - **blockers:** none.
+
+## 2026-09-04 — Suite-wide quality hardening (general fixes) + BLOCKED on API credits
+
+- **why:** Clara seeded a new goal — drive the whole suite LIVE and verify math, explanations,
+  visuals, animations, and follow-ups are all correct/clear/clean/relevant, with GENERAL fixes
+  only (the agent must be good on ANY in-scope problem, not just the suite).
+- **method:** drove all 39 cases through the LIVE agent capturing full answers + follow-ups, then
+  read them for correctness/clarity (not just pass/fail). Explanations were largely excellent and
+  grounded; found concrete GENERAL defects:
+  1. thin model context → the agent guessed directions/comparisons (AL1 "45° diagonals" model-derived);
+  2. `focus_view` couldn't reach linear-algebra directions (failed focus on "most stretched");
+  3. some out-of-scope requests bluffed (AX6 "factor the polynomial");
+  4. reopened-sweep follow-up "which basin is deeper?" answered "equal" (wrong; missing basin data);
+  5. `ClaudeBrain.orchestrate` false-declined a tool-free contextual answer.
+- **general fixes (commit a2fc7c3):** (1) enrich `_tool_result_payload` with each verified
+  quantity's KEY value (compacted; long point-arrays summarised → small + JSON-safe) so the model
+  grounds directions/comparisons; (2) `_resolve_feature` handles eigenvector/most-stretched/
+  principal/singular directions; (3) out-of-scope guard covers symbolic algebra; (4) system-prompt
+  qualitative-grounding + one-solver + drive-the-right-tool; (5) `run_simulation` puts the verified
+  sweep quantity on the scene; (6) decline logic fixed. 35 offline regression tests added
+  (`tests/test_agent_quality.py`, under CHK-007).
+- **verified LIVE before credits ran out:** AL1 now model_derived=False (states real eigenvectors
+  (−1,1)/λ1, (1,1)/λ3); "which direction is stretched most?" drives focus_view to (1,1); fresh
+  sweep "which basin is deeper?" → correct ("left ≈ −0.305 deeper, 0.3x tilt"). Full suite core
+  20/20 = 100% (3 nondeterministic misses: 2 labelled-model-derived, 1 the AX6 gap now fixed).
+- **verified OFFLINE (brain-independent):** browser VISUAL pass across all 5 areas + 3D SVD
+  ellipsoid + animate/sweep markers — clean, no console errors. verify GREEN (26/26), 100 tests pass.
+- **⚠️ BLOCKER B1:** the Anthropic credit balance is exhausted (live calls now 400 "credit balance
+  too low"). The remaining LIVE re-verification (vector/linalg/dynamics follow-ups, a full live
+  re-drive, a live rendered-app pass) cannot proceed until Clara tops up credits. All non-live
+  fronts are done. Buying credits is a financial action the agent must not take → surfaced to Clara.
+- **next:** on credits, re-drive the full suite live + live follow-ups per area + live browser pass;
+  then the goal's finish line holds.
+- **blockers:** B1 open.
