@@ -50,6 +50,7 @@ class Interpretation:
     note: str = ""            # human-readable interpretation, shown in the trace
     reason: str = ""          # when declining
     suggestion: str = ""      # nearest in-scope idea, when declining
+    out_of_scope: bool = False  # a decline because the request is outside the five areas
 
 
 # --- expression helpers ------------------------------------------------------
@@ -486,7 +487,8 @@ def _decline(low: str) -> Interpretation:
                 reason="that is outside this tool's five areas (scalar fields, optimization, "
                        "vector fields, linear algebra, and dynamical systems).",
                 suggestion="I can show the nearest geometric idea — e.g. 'show me a saddle', "
-                           "'an example of chaos', or 'the field F = (-y, x)'.")
+                           "'an example of chaos', or 'the field F = (-y, x)'.",
+                out_of_scope=True)
     return Interpretation(
         "decline",
         reason="I couldn't read that as a problem in one of the five areas.",

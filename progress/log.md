@@ -1100,3 +1100,38 @@ reader: state, not narrative.
 - APPROVED: BASELINE
 - Clara's stated authority, verbatim: "Go ahead and approve for me. Also commit and push everything."
 - Attribution mode makes this an audit record, not proof the authority was real. Enable signing (docs/governance.md) for approval the agent cannot forge.
+
+## 2026-09-04 — LIVE full-suite drive (real Claude agent) + live-brain hardening
+
+- **why:** Clara: "you shouldn't have declared done unless you drove through every problem in
+  the test suite LIVE with the actual agent." Correct — the earlier "done" rested on the OFFLINE
+  path (verify.py + browser on `ANTHROPIC_API_KEY=""`). Drove all 39 `suite/agent_tests.json`
+  cases through the LIVE Claude brain.
+- **first live drive FAILED the bar:** overall 35/39, **protected core 17/20 (85%)** — real
+  live-only defects the deterministic offline path masked: AX2 (heat equation) BLUFFED as an ODE
+  instead of declining; AO1 ("minimize x^2+3y^2") called two solvers and landed on scalar-fields
+  not optimization; AS6/AS7 (conceptual) emitted an unlabelled model-derived number (e.g. "60°").
+  Live Claude is probabilistic; the offline brain is deterministic and was always right.
+- **hardening (deterministic guardrails around the live brain, per C-VERIFIED-MATH):**
+  1. `Agent.run` now runs the deterministic reader first and DECLINES a confidently out-of-scope
+     request (PDE/heat/wave, integral, probability, primes, weather) before the brain sees it —
+     the model can't be tempted to bluff one. `Interpretation.out_of_scope` added.
+  2. `ClaudeBrain.orchestrate` injects the deterministic interpreter's tool read as a first-turn
+     HINT ("prefer the <tool> tool"), steering the live agent to the right solver.
+  3. `_SYSTEM` tightened: exactly one solve_ tool per problem (minimize → solve_optimization,
+     not also solve_scalar_field); never state a number a tool didn't return, including geometric
+     constants like an angle — model-derived is a rare, labelled last resort.
+- **re-drive PASSED:** **LIVE 39/39 = 100%, protected core 20/20 = 100%**, all 6 out-of-scope
+  declined with no tool call (~366s). Offline `verify.py` still GREEN (26/26); 65 unit tests pass;
+  governance clean (code changes are non-governed; digests unchanged).
+- **Phase-4 flows driven LIVE too:** animate → `animate_motion` (2000 verified pts); sweep →
+  `run_simulation` (36 runs, 2 basins 18/18, verified); follow-up → trace present (empty calls =
+  answered-from-context, not the old blank). All grounded, none unlabelled-model-derived.
+- **known limitation (not a Phase-4 gap, not in the suite):** the live agent may DECLINE to
+  plain-solve some quartics as a scalar field (e.g. `(x^2-1)^2+0.3x+y^2`) because critical-point
+  verification fails for them — a graceful decline (G8), and the SWEEP on the same landscape works
+  (run_simulation builds its own verified surface). Noted for a future engine improvement.
+- **evidence updated:** G2/G3 record the live 100% drive; G22/G23/G25 record live confirmation.
+- **next:** none open. If desired, a live rendered-app browser pass for felt UX. Do not work past
+  the finish line.
+- **blockers:** none.

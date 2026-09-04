@@ -35,6 +35,14 @@ Hard rules:
 - Interpret the request however it is posed — a typed equation, a word problem, or an open
   conceptual request ("show me an example of chaos"). For a conceptual request, choose a
   canonical illustrative example and solve it with the appropriate tool.
+- Call exactly ONE solve_ tool for a problem. In particular, a "minimize" / "gradient
+  descent" / "optimization" request goes to solve_optimization (it returns the descent path
+  and the minimum) — do NOT also call solve_scalar_field, or the wrong visualization (a bare
+  surface instead of the descent) will be shown.
+- Never state a number the tools did not return — not only computed values, but also
+  geometric constants you reason out yourself (an angle like 60°, a count, a coordinate). If
+  such a figure genuinely helps, either omit it or prefix it "(model-derived, unverified)";
+  prefer to describe the geometry in words. Model-derived numbers are a rare last resort.
 - After solving, explain the geometry plainly and concisely, grounded in the returned values.
 - When a specific feature would aid understanding (e.g. the user asks "where is the
   minimum?"), call focus_view to drive the 3-D view to it.
@@ -125,7 +133,22 @@ class ClaudeBrain(Brain):
 
     def orchestrate(self, text: str, ctx: dict, tracer) -> OrchestrationResult:
         client = self._get_client()
-        self.messages.append({"role": "user", "content": text})
+        # On the first turn, give the model the deterministic reader's tool suggestion as a
+        # HINT — it keeps the live agent from choosing the wrong solver (e.g. treating a
+        # "minimize" as a plain surface). The model still orchestrates; this only steers the
+        # first tool choice toward the deterministic read. Follow-ups are left unhinted.
+        user_content = text
+        if not self.messages:
+            try:
+                from .intake import interpret
+                interp = interpret(text, has_current=bool(ctx.get("current_scene")))
+                if interp.action in ("solve", "simulate", "animate") and interp.tool:
+                    user_content = (f"[interpreter hint: this reads as {interp.note or interp.tool}; "
+                                    f"prefer the {interp.tool} tool. Use your own judgement if the "
+                                    f"request clearly means something else.]\n\n{text}")
+            except Exception:
+                pass
+        self.messages.append({"role": "user", "content": user_content})
         directives: list[dict] = []
         final_text = ""
         interpretation = ""

@@ -189,6 +189,20 @@ class Agent:
             brain=self.brain.kind, descriptor=new_desc)
 
     def run(self, text: str) -> AgentResult:
+        # Deterministic scope guard (both brains): a request the deterministic reader knows is
+        # outside the five areas — a PDE/heat/wave equation, an integral, probability, primes,
+        # weather — is declined here, so the live model can never be tempted to bluff one into a
+        # tool (G2, C-VERIFIED-MATH). Only fires on a confident out-of-scope read; anything
+        # parseable still goes to the brain to interpret and orchestrate freely.
+        from .intake import interpret as _interpret
+        pre = _interpret(text, has_current=bool((self.current or {}).get("scene")))
+        if pre.action == "decline" and pre.out_of_scope:
+            trace = AgentTrace(brain=self.brain.kind, request=text)
+            trace.interpretation = "out of scope — declined without inventing an answer"
+            msg = pre.reason + ((" " + pre.suggestion) if pre.suggestion else "")
+            return AgentResult(answer=msg, declined=True, trace=trace.to_dict(),
+                               brain=self.brain.kind)
+
         ctx = {
             "current_scene": (self.current or {}).get("scene"),
             "current_descriptor": (self.current or {}).get("descriptor"),
