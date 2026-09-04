@@ -80,6 +80,16 @@ function animate() {
       fades.splice(i, 1);
     }
   }
+  // agent-driven playback: markers travel along VERIFIED paths (a trajectory, a descent,
+  // or every run of a sweep). Motion follows tool-computed data only (C-VERIFIED-MOTION).
+  for (let i = motionAnim.length - 1; i >= 0; i--) {
+    const m = motionAnim[i];
+    const p = Math.min(1, (tnow - m.t0) / m.dur);
+    const f = p * (m.pts.length - 1), j = Math.floor(f), r = f - j;
+    m.marker.position.lerpVectors(m.pts[j], m.pts[Math.min(j + 1, m.pts.length - 1)], r);
+    if (m.trailGeom) m.trailGeom.setDrawRange(0, Math.max(2, Math.ceil(p * m.pts.length)));
+    if (p >= 1) { m.done = true; motionAnim.splice(i, 1); }
+  }
   controls.update();
   renderer.render(scene, camera);
   _frames++;
@@ -132,6 +142,70 @@ highlightMarker.visible = false;
 scene.add(highlightMarker);
 
 const V = (p) => new THREE.Vector3(p[0], p[1], (p[2] || 0) * zScale);
+
+// --- agent-driven animation / simulation playback (G22, G23) -----------------
+// The agent's animation tools hand the frontend a VERIFIED path (an integrated trajectory,
+// a descent, or every run of a sweep); a marker replays it here. The frontend never
+// synthesizes motion — it only plays back tool-computed, verified data (C-VERIFIED-MOTION).
+let motionGroup = new THREE.Group();
+scene.add(motionGroup);
+let motionAnim = [];          // {marker, pts:[Vector3], t0, dur, trailGeom?} — active playbacks
+const RUN_COLORS = [0x4fd6c9, 0xffb454, 0xe06c9f, 0x7aa2f7, 0x9ece6a, 0xf7768e, 0xbb9af7];
+
+function clearMotion() {
+  motionGroup.traverse((o) => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+  });
+  scene.remove(motionGroup);
+  motionGroup = new THREE.Group();
+  scene.add(motionGroup);
+  motionAnim = [];
+}
+function _marker(color, radius) {
+  return new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 16),
+                        new THREE.MeshBasicMaterial({ color }));
+}
+// Play one path: a marker travels it while the curve draws on behind it (G22).
+function animatePath(path, { color = 0xffd166, dur = 4200 } = {}) {
+  clearMotion();
+  const pts = (path || []).map(V);
+  if (pts.length < 2) return;
+  const trailGeom = new THREE.BufferGeometry().setFromPoints(pts);
+  trailGeom.setDrawRange(0, 2);
+  motionGroup.add(new THREE.Line(trailGeom,
+    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.85 })));
+  const marker = _marker(color, 0.2);
+  marker.position.copy(pts[0]);
+  motionGroup.add(marker);
+  motionAnim.push({ marker, pts, t0: performance.now(), dur, trailGeom });
+}
+// Play a whole sweep: every run's actual path, a marker per run coloured by basin, and a
+// resting marker at each verified basin sized by how many runs it caught (G23).
+function animateRuns(runs, basins, { dur = 3600 } = {}) {
+  clearMotion();
+  for (const run of runs || []) {
+    const pts = (run.path || []).map(V);
+    if (pts.length < 2) continue;
+    const col = RUN_COLORS[run.basin % RUN_COLORS.length];
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    motionGroup.add(new THREE.Line(geo,
+      new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.28 })));
+    const marker = _marker(col, 0.1);
+    marker.position.copy(pts[0]);
+    motionGroup.add(marker);
+    motionAnim.push({ marker, pts, t0: performance.now(), dur });
+  }
+  (basins || []).forEach((b, i) => {
+    const col = RUN_COLORS[i % RUN_COLORS.length];
+    const s = _marker(col, 0.14 + 0.04 * Math.sqrt(b.count || 1));
+    s.position.copy(V(b.position));
+    const ring = new THREE.Mesh(new THREE.SphereGeometry(s.geometry.parameters.radius * 1.5, 18, 18),
+      new THREE.MeshBasicMaterial({ color: col, wireframe: true, transparent: true, opacity: 0.4 }));
+    ring.position.copy(s.position);
+    motionGroup.add(s); motionGroup.add(ring);
+  });
+}
 
 // viridis-ish colormap
 const STOPS = [
@@ -369,6 +443,7 @@ const FIELD_IDS = new Set(["vector_field", "flow_field", "gradient_field"]);
 function buildScene(data) {
   sceneData = data;
   clearContent();
+  clearMotion();
   drawAnim = []; growAnim = []; fades = [];
   surfaceMode = "surface";              // every new problem starts on grow-from-centre
   surfaceLayerObj = null; surfaceGroup = null; contourGroup = null;
@@ -566,6 +641,14 @@ function clearHighlight() {
 window.__ml.focusOn = focusOn;
 // debug: how many entrance animations are in flight (0 once everything has finished drawing)
 window.__ml.drawing = () => ({ draw: drawAnim.length, grow: growAnim.length, fade: fades.length });
+// playback state for tests / checks: active playbacks and total markers on the scene
+window.__ml.motion = () => ({
+  active: motionAnim.length,
+  markers: motionGroup.children.filter((o) => o.isMesh).length,
+  paths: motionGroup.children.filter((o) => o.isLine).length,
+});
+window.__ml.animatePath = animatePath;
+window.__ml.animateRuns = animateRuns;
 
 // ---------------------------------------------------------------- UI ----------
 // Phase 3: one unified conversation. The tutor's explanation and the chat are a single thread
@@ -600,6 +683,8 @@ const bdMinus = $("bd-minus");
 const bdPlus = $("bd-plus");
 const bdExpand = $("bd-expand");
 const bdLabel = $("bd-label");
+const recentEl = $("recent");
+const sessionListEl = $("session-list");
 
 let SESSION = Math.random().toString(36).slice(2);
 let sessionActive = false;
@@ -607,6 +692,7 @@ let thread = [];          // the one conversation (also the history — G14/G16)
 let lessonSteps = [];     // the current problem's walkthrough steps
 let stepCursor = -1;      // index of the last-revealed walkthrough step (-1 = not started)
 let curScene = null;
+let curDescriptor = null; // the current problem's descriptor — what a saved session re-opens
 let boundsFactor = 1;
 let busy = false;
 
@@ -668,7 +754,9 @@ function pushUserMsg(text) {
   threadEl.appendChild(d); scrollThread();
 }
 function pushAgentMsg(answer, r) {
-  thread.push({ role: "agent", text: answer });
+  thread.push({ role: "agent", text: answer,
+                grounded_in: (r && r.grounded_in) || [],
+                model_derived: !!(r && r.model_derived) });
   const d = document.createElement("div");
   d.className = "msg agent";
   const verified = r && !r.model_derived;
@@ -724,20 +812,42 @@ function updateSuggestions() {
   chips.push({ t: "why is this?" });
   const cur = stepCursor >= 0 ? lessonSteps[stepCursor] : null;
   chips.push({ t: cur && cur.quantity ? "explain this step" : "what does this show?" });
+  // motion (G22) and simulation (G23) offered where they apply to the current geometry
+  const area = (curScene && curScene.area) || "";
+  const hasMotion = curScene && (curScene.layers || []).some(
+    (l) => String(l.id).startsWith("trajectory") || l.id === "descent_path");
+  if (hasMotion) chips.push({ t: "animate the motion", cmd: "animate the trajectory" });
+  if (area === "scalar-fields" || area === "optimization")
+    chips.push({ t: "run a descent sweep", cmd: "run a multi-start descent sweep" });
   for (const c of chips) {
     const el = document.createElement("button");
     el.className = "sugchip" + (c.next ? " primary" : "");
     el.textContent = c.t;
-    el.onclick = () => { if (c.next) nextStep(); else sendQuestion(c.t); };
+    el.onclick = () => { if (c.next) nextStep(); else sendQuestion(c.cmd || c.t); };
     suggestionsEl.appendChild(el);
   }
 }
+
+// An "advance the walkthrough" intent typed into the composer must drive the walkthrough
+// LOCALLY (like the next-step chip), never go to the agent — otherwise the agent re-narrates
+// a step, the walkthrough stays put, and the thread shows a repeated/confused step (G24).
+const ADVANCE_RE = /^(?:show me the )?(?:the )?next(?: step)?\.?$|^(?:continue|proceed|go on|keep going|next one)\.?$|^walk me through(?: it)?\.?$/i;
+function isAdvanceIntent(text) {
+  return ADVANCE_RE.test((text || "").trim()) && lessonSteps.length > 0
+    && stepCursor < lessonSteps.length - 1;
+}
+// motion (G22) and simulation (G23) commands are routed to the orchestration loop, not the
+// per-step follow-up path, so the agent can call its animation / sweep tools.
+const MOTION_RE = /\b(animate|play (?:the|it|back)|watch it move|set it moving|make it move|in motion|run the trajectory|show the motion)\b/i;
+const SIM_RE = /\b(simulat|sweep|multi[- ]?start|which basin|monte ?carlo|many starts|run (?:it )?many)\b/i;
 
 // --- asking a question (answered by the agent, grounded in the current step) -
 async function sendQuestion(text) {
   text = (text || "").trim();
   if (!text || !sessionActive) return;
+  if (isAdvanceIntent(text)) { nextStep(); return; }  // stay coherent: advance locally (G24)
   pushUserMsg(text);
+  if (MOTION_RE.test(text) || SIM_RE.test(text)) { await runCommand(text); return; }  // G22/G23
   const cur = stepCursor >= 0 ? lessonSteps[stepCursor] : (lessonSteps[0] || null);
   const step = cur ? { quantity: cur.quantity, focus: cur.focus, focus_target: cur.focus_target,
                        id: cur.id, title: cur.title } : null;
@@ -747,6 +857,7 @@ async function sendQuestion(text) {
   pushAgentMsg(r.answer, r);
   const d = (r.directives || []).find((x) => x && x.type === "focus" && Array.isArray(x.target));
   if (d) focusOn(d.target, 0.55);
+  saveSession();
 }
 
 // --- posing a problem from the launcher (starts a session) ------------------
@@ -757,21 +868,23 @@ async function solveProblem(text) {
   const r = await api("/api/agent", { session: SESSION, text });
   if (!r) return;
   renderTrace(r.trace);
-  const isSolve = (r.trace && r.trace.tool_sequence || []).some((t) => t.startsWith("solve_"));
+  const seq = (r.trace && r.trace.tool_sequence) || [];
+  const isSolve = seq.some((t) => t.startsWith("solve_")) || seq.includes("run_simulation");
   if (r.scene && isSolve) startSession(r, text);
   else { launchNote.hidden = false; launchNote.textContent = r.answer || "I couldn't solve that — try rephrasing."; }
 }
 
 const FIELD_HAS = (scene) => (scene.layers || []).some((l) => l.type === "vectors" && FIELD_IDS.has(l.id));
 
-function startSession(r, userText) {
+// Build (or rebuild) the visualization and its chrome from an agent result, without touching
+// the conversation thread. Shared by a fresh session start and an in-session scene change
+// (an expanded-bounds re-solve, or a simulation that shows a new landscape).
+function applySceneChrome(r) {
   fieldHidden = false; clearHighlight();
   buildScene(r.scene); curScene = r.scene;                 // shows the full scene (G4)
+  curDescriptor = r.descriptor || null;                    // so this session can be re-opened (G21)
   lessonSteps = r.walkthrough || [];
   stepCursor = -1;
-  sessionActive = true;
-  launcher.hidden = true; dock.hidden = false; dockTab.hidden = true;
-  newChatBtn.hidden = false; traceToggle.hidden = false;
   const hasField = FIELD_HAS(r.scene);
   fieldToggle.hidden = !hasField; fieldToggle.classList.toggle("on", hasField && !fieldHidden);
   const hasSurface = (r.scene.layers || []).some((l) => l.type === "surface");
@@ -781,20 +894,59 @@ function startSession(r, userText) {
   boundsEl.hidden = !domainBased; boundsFactor = 1; bdLabel.textContent = "bounds ×1";
   const rawTitle = (r.scene.title || "").trim();
   dockSub.textContent = (rawTitle ? notation(rawTitle) : (r.area || "")) || "";
+}
+
+function startSession(r, userText) {
+  applySceneChrome(r);
+  sessionActive = true;
+  launcher.hidden = true; dock.hidden = false; dockTab.hidden = true;
+  newChatBtn.hidden = false; traceToggle.hidden = false;
   thread = []; threadEl.innerHTML = "";
   pushUserMsg(userText);
   pushAgentMsg(r.answer, r);
+  applyMotionDirectives(r.directives);   // a launcher "run a sweep" plays immediately
   updateSuggestions();
+  saveSession();
+}
+
+// Apply an agent turn's view-driving directives: a simulation playback, a motion playback,
+// or a single focus move (whichever the agent issued). Motion always replays verified data.
+function applyMotionDirectives(directives) {
+  const list = directives || [];
+  const sim = list.find((d) => d && d.type === "simulate");
+  const anim = list.find((d) => d && d.type === "animate");
+  const foc = list.find((d) => d && d.type === "focus" && Array.isArray(d.target));
+  if (sim) { animateRuns(sim.runs || [], sim.basins || []); fitCamera(); }
+  else if (anim) { animatePath(anim.path || []); }
+  else if (foc) { focusOn(foc.target, 0.55); }
+}
+
+// An orchestration command mid-session (animate / simulate): routed through the agent's
+// orchestration loop (no step context), which may rebuild the scene (a sweep) and/or issue a
+// playback directive. Keeps the one thread intact (G16).
+async function runCommand(text) {
+  const r = await api("/api/agent", { session: SESSION, text });
+  if (!r) return;
+  renderTrace(r.trace);
+  const seq = (r.trace && r.trace.tool_sequence) || [];
+  if (r.scene && (seq.includes("run_simulation") || seq.some((t) => t.startsWith("solve_")))) {
+    applySceneChrome(r);
+  }
+  pushAgentMsg(r.answer, r);
+  applyMotionDirectives(r.directives);
+  updateSuggestions();
+  saveSession();
 }
 
 function newChat() {
   SESSION = Math.random().toString(36).slice(2);
-  sessionActive = false; lessonSteps = []; stepCursor = -1; curScene = null;
+  sessionActive = false; lessonSteps = []; stepCursor = -1; curScene = null; curDescriptor = null;
   dock.hidden = true; dockTab.hidden = true; newChatBtn.hidden = true; boundsEl.hidden = true;
   fieldToggle.hidden = true; contourToggle.hidden = true; traceToggle.hidden = true; tracePanel.hidden = true;
-  clearContent();
+  clearContent(); clearMotion();
   thread = []; threadEl.innerHTML = ""; suggestionsEl.innerHTML = "";
   launcher.hidden = false; launchNote.hidden = true; launchInput.value = "";
+  renderSessionList();   // the start state lists saved sessions to re-open or delete (G21)
 }
 
 // --- expandable bounds (G20) -------------------------------------------------
@@ -810,11 +962,13 @@ async function applyBounds(factor) {
   contourToggle.hidden = !hasSurface;
   const hasField = FIELD_HAS(r.scene);
   fieldToggle.hidden = !hasField; fieldToggle.classList.toggle("on", hasField && !fieldHidden);
+  if (r.descriptor) curDescriptor = r.descriptor;      // the expanded domain is what re-opens
   if (stepCursor >= 0) {                              // keep the walkthrough position framed
     startDrawIn();
     const s = lessonSteps[Math.min(stepCursor, lessonSteps.length - 1)];
     if (s) driveStep(s);
   }
+  saveSession();
 }
 
 // --- trace (tool calls) — G7 -------------------------------------------------
@@ -830,6 +984,109 @@ function renderTrace(trace) {
     `<div class="tinterp">interpretation: ${escapeHtml(trace.interpretation || "—")}</div>`
     + (rows || '<div class="tcall">answered from the current problem (no tools called)</div>');
 }
+
+// --- session persistence (G21) ----------------------------------------------
+// Chat sessions are saved automatically to this browser's localStorage — local to the user's
+// machine (C-LOCAL). A saved session stores the conversation and the problem DESCRIPTOR; it is
+// re-opened by re-solving that descriptor (so the visualization comes back, freshly verified)
+// and replaying the stored thread. The user can re-open or delete any saved session.
+const STORE_KEY = "manifold.sessions.v1";
+const MAX_SESSIONS = 20;
+
+function _loadStore() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || "[]") || []; }
+  catch { return []; }
+}
+function _writeStore(list) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(list.slice(0, MAX_SESSIONS))); return true; }
+  catch { return false; }   // private mode / quota — the app still works, just no history
+}
+
+// Persist the current session (called after every turn). Needs a descriptor to be reopenable.
+function saveSession() {
+  if (!sessionActive || !curDescriptor) return;
+  const title = (dockSub.textContent || (curScene && curScene.title) || "Session").trim();
+  const record = {
+    id: SESSION, title, area: (curScene && curScene.area) || "",
+    descriptor: curDescriptor,
+    thread: thread.map((m) => (m.role === "tutor"
+      ? { role: "tutor", step: m.step }
+      : { role: m.role, text: m.text, grounded_in: m.grounded_in, model_derived: m.model_derived })),
+    stepCursor, savedAt: Date.now(),
+  };
+  const list = _loadStore().filter((s) => s.id !== SESSION);
+  list.unshift(record);
+  _writeStore(list);
+}
+
+function deleteSession(id) {
+  _writeStore(_loadStore().filter((s) => s.id !== id));
+  renderSessionList();
+}
+
+// Re-open a saved session: re-solve its descriptor (restoring the server agent's problem too,
+// so follow-ups keep working) and replay the stored conversation.
+async function reopenSession(id) {
+  const rec = _loadStore().find((s) => s.id === id);
+  if (!rec) return;
+  const r = await api("/api/restore", { session: id, descriptor: rec.descriptor });
+  if (!r || !r.scene) { launchNote.hidden = false; launchNote.textContent = "Couldn't re-open that session."; return; }
+  SESSION = id;
+  applySceneChrome(r);
+  sessionActive = true;
+  launcher.hidden = true; dock.hidden = false; dockTab.hidden = true;
+  newChatBtn.hidden = false; traceToggle.hidden = false;
+  thread = []; threadEl.innerHTML = "";
+  replayThread(rec.thread || []);
+  // restore the walkthrough position and its matching visual state
+  stepCursor = Number.isInteger(rec.stepCursor) ? rec.stepCursor : -1;
+  if (stepCursor >= 0 && lessonSteps.length) {
+    startDrawIn();
+    driveStep(lessonSteps[Math.min(stepCursor, lessonSteps.length - 1)]);
+  }
+  updateSuggestions();
+}
+
+// Re-render a stored conversation into the thread (users, agent answers, tutor step cards).
+function replayThread(entries) {
+  for (const m of entries) {
+    if (m.role === "user") pushUserMsg(m.text);
+    else if (m.role === "agent") pushAgentMsg(m.text, { grounded_in: m.grounded_in, model_derived: m.model_derived });
+    else if (m.role === "tutor" && m.step) appendStepMsg(m.step);
+  }
+}
+
+function _agoLabel(ts) {
+  const s = Math.max(1, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return "just now";
+  const m = Math.round(s / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60); if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+// Render the saved-session list on the start screen (G21).
+function renderSessionList() {
+  if (!sessionListEl) return;
+  const list = _loadStore();
+  recentEl.hidden = list.length === 0;
+  sessionListEl.innerHTML = "";
+  for (const s of list) {
+    const row = document.createElement("div");
+    row.className = "rc-item";
+    row.innerHTML =
+      `<button class="rc-open" data-id="${escapeHtml(s.id)}">` +
+        `<span class="rc-title">${escapeHtml(s.title || "Session")}</span>` +
+        `<span class="rc-meta">${escapeHtml(s.area || "")} · ${_agoLabel(s.savedAt)}</span>` +
+      `</button>` +
+      `<button class="rc-del" data-id="${escapeHtml(s.id)}" title="Delete session" aria-label="Delete session">` +
+        `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>` +
+      `</button>`;
+    row.querySelector(".rc-open").onclick = () => reopenSession(s.id);
+    row.querySelector(".rc-del").onclick = (e) => { e.stopPropagation(); deleteSession(s.id); };
+    sessionListEl.appendChild(row);
+  }
+}
+window.__ml.sessions = () => ({ saved: _loadStore().length, ids: _loadStore().map((s) => s.id) });
 
 // ---------------------------------------------------------------- controls ----
 launchSend.onclick = () => solveProblem(launchInput.value);
@@ -882,4 +1139,5 @@ window.__ml.session = () => ({
 });
 
 loadHealth();
+renderSessionList();  // show any saved sessions on the start screen (G21)
 animate(); // start the render loop once all module state is initialized

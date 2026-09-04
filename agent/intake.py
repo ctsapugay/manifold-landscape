@@ -42,7 +42,7 @@ _OUT_OF_SCOPE = (
 
 @dataclass
 class Interpretation:
-    action: str  # "solve" | "chat" | "focus" | "decline"
+    action: str  # "solve" | "chat" | "focus" | "animate" | "simulate" | "decline"
     tool: str = ""
     tool_input: dict = field(default_factory=dict)
     question: str = ""
@@ -274,6 +274,16 @@ _CONCEPTUAL = [
      "the source field F = (x, y), whose divergence is positive everywhere"),
 ]
 
+# motion / simulation cues (G22, G23). A default multi-basin landscape lets a bare
+# "run a simulation of which basin wins" work with no problem posed yet.
+_ANIMATE_WORDS = ("animate", "play the", "play it", "play back", "watch it move",
+                  "watch the motion", "show the motion", "set it moving", "make it move",
+                  "run the trajectory", "in motion")
+_SIMULATE_WORDS = ("simulate", "simulation", "sweep", "multi-start", "multistart",
+                   "multiple starts", "many starts", "which basin", "monte carlo",
+                   "run it many", "run many")
+_SWEEP_DEFAULT_EXPR = "(x**2 - 1)**2 + 0.3*x + y**2"  # a tilted double well: a clear winner
+
 _FOCUS_WORDS = ("zoom", "focus", "look at", "point at", "highlight", "take me to",
                 "center on", "centre on", "go to")
 _FOCUS_FEATURES = ("minimum", "min", "maximum", "max", "saddle", "attractor",
@@ -297,6 +307,19 @@ def interpret(text: str, has_current: bool = False) -> Interpretation:
         return Interpretation("decline", reason="empty request",
                               suggestion="try 'f = x^2 - y^2' or 'show me an example of chaos'")
     low = raw.lower()
+
+    # 0) A simulation / sweep request — may carry its own expression, use the current
+    #    problem, or fall back to a canonical multi-basin landscape (G23). Checked before
+    #    problem detection so "run a sweep on f = ..." simulates rather than plain-solves.
+    if any(w in low for w in _SIMULATE_WORDS):
+        return _interpret_simulation(raw, low, has_current)
+
+    # 0b) An animation / playback request on the current problem (G22).
+    if has_current and any(w in low for w in _ANIMATE_WORDS):
+        feat = _focus_feature_in(low)
+        return Interpretation("animate", tool="animate_motion",
+                              tool_input={"feature": feat} if feat else {},
+                              note="play the verified motion in the view")
 
     # 1) A new, explicitly-typed problem always takes precedence.
     solved = _detect_problem(raw, low)
@@ -413,6 +436,31 @@ def _split_constrained(text: str):
     else:
         con = canon(con_raw, {"x", "y"})
     return obj, con
+
+
+def _sweep_expr(raw: str) -> str | None:
+    """Pull an f(x,y) out of a sweep request ('...sweep on (x^2-1)^2 + y^2'), or None."""
+    prepped = _num_word_cleanup(raw)
+    m = re.search(r"\b(?:on|of|for|over)\b\s+(.+)$", prepped, re.IGNORECASE)
+    seg = m.group(1) if m else prepped
+    core = _math_core(seg)
+    cand = _extract_expr_after_eq(core) if "=" in core else core
+    e = canon(cand, {"x", "y"})
+    return e if (e and re.search(r"[xy]", e)) else None
+
+
+def _interpret_simulation(raw: str, low: str, has_current: bool) -> Interpretation:
+    """A multi-start descent sweep. Prefer an expression in the request; else the current
+    problem; else a canonical multi-basin landscape so the request still works (G23)."""
+    ti: dict = {}
+    expr = _sweep_expr(raw)
+    if expr:
+        ti["expr"] = expr
+    elif not has_current:
+        ti["expr"] = _SWEEP_DEFAULT_EXPR
+    # else: no expr and a current problem → the tool sweeps the current landscape
+    return Interpretation("simulate", tool="run_simulation", tool_input=ti,
+                          note="a multi-start gradient-descent sweep — which basin wins most")
 
 
 def _detect_conceptual(low: str) -> Interpretation | None:

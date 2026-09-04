@@ -190,6 +190,138 @@ def _t_focus(ctx, feature: str, index: int = 0, **_) -> ToolResult:
                       directive=directive, summary=f"focus on {feature} at {pos}")
 
 
+def _motion_source(scene: dict, feature: str = ""):
+    """Pick the motion layer to animate in the CURRENT scene, and the verified quantity it
+    came from. Returns (layer, quantity_dict, motion_kind) or (None, None, None)."""
+    area = scene.get("area", "")
+    layers = {l["id"]: l for l in scene.get("layers", [])}
+    traj = [l for l in scene.get("layers", []) if str(l["id"]).startswith("trajectory")]
+    order = []
+    if area == "dynamical-systems":
+        order = [(traj[0], traj[0]["id"], "trajectory")] if traj else []
+    elif area == "optimization" and "descent_path" in layers:
+        order = [(layers["descent_path"], "descent", "descent")]
+    if not order:  # fall back across areas
+        if traj:
+            order = [(traj[0], traj[0]["id"], "trajectory")]
+        elif "descent_path" in layers:
+            order = [(layers["descent_path"], "descent", "descent")]
+    if not order:
+        return None, None, None
+    layer, qname, motion = order[0]
+    q = next((x for x in scene.get("quantities", []) if x.get("name") == qname), None)
+    return layer, q, motion
+
+
+def _t_animate(ctx, feature: str = "", **_) -> ToolResult:
+    """Drive an animated playback of a VERIFIED motion in the current scene (G22): a
+    dynamical-systems trajectory or an optimization descent path. The motion is a faithful
+    replay of a tool-computed, independently-verified quantity — never fabricated
+    (C-VERIFIED-MOTION)."""
+    scene = (ctx or {}).get("current_scene")
+    if not scene:
+        return ToolResult(ok=False, tool="animate_motion",
+                          error="no current problem to animate")
+    layer, q, motion = _motion_source(scene, feature)
+    if layer is None:
+        return ToolResult(ok=False, tool="animate_motion",
+                          error="there is no trajectory or descent path to animate here; try an "
+                                "optimization or dynamical-systems problem, or ask me to run a "
+                                "descent sweep")
+    if not q or not (q.get("verification", {}) or {}).get("passed"):
+        return ToolResult(ok=False, tool="animate_motion",
+                          error="the motion's source quantity is not verified")
+    path = layer.get("data", {}).get("points", [])
+    if len(path) < 2:
+        return ToolResult(ok=False, tool="animate_motion", error="motion path is too short")
+    directive = {"type": "animate", "motion": motion, "layer": layer["id"],
+                 "path": path, "label": layer.get("label", ""),
+                 "source_quantity": q.get("name"), "verified": True}
+    return ToolResult(ok=True, tool="animate_motion", area=scene.get("area", ""),
+                      directive=directive, quantities=[q],
+                      summary=f"play the {motion} along {len(path)} verified points")
+
+
+def _t_simulation(ctx, expr: str = "", domain=None, starts_per_axis: int = 5,
+                  lr: float = 0.1, steps: int = 60, **_) -> ToolResult:
+    """Run a multi-start gradient-descent sweep over a landscape and report which basin wins
+    (G23). Every run and every basin is tool-computed and verified (C-VERIFIED-MOTION); the
+    tool returns the verified per-basin counts plus an animated playback of the ACTUAL runs."""
+    import numpy as np
+    from engine.optimization import OptimizationLandscape
+
+    desc = (ctx or {}).get("current_descriptor") or {}
+    e = expr or desc.get("expr") or desc.get("f")
+    if not e:
+        return ToolResult(ok=False, tool="run_simulation",
+                          error="no landscape to sweep — pose a scalar field or optimization "
+                                "problem first, or give an expression to sweep")
+    dom = domain or desc.get("domain") or [[-3.0, 3.0], [-3.0, 3.0]]
+    dom = [[float(a), float(b)] for a, b in dom][:2]
+    try:
+        land = OptimizationLandscape(e)
+        (x0, x1), (y0, y1) = dom
+        n = max(2, min(6, int(starts_per_axis)))
+        starts = [[float(x), float(y)]
+                  for x in np.linspace(x0, x1, n) for y in np.linspace(y0, y1, n)]
+        sweep = land.descent_sweep(starts, lr=float(lr), steps=int(steps))
+    except Exception as exc:
+        return ToolResult(ok=False, tool="run_simulation",
+                          error=f"could not run the sweep ({type(exc).__name__}: {exc})")
+    if not sweep.verified:
+        return ToolResult(ok=False, tool="run_simulation",
+                          error="the sweep did not pass verification")
+
+    # A minimal context surface for the runs to descend over: the surface + its gradient
+    # field. Built directly (not via a full scalar solve) so the sweep does not depend on a
+    # quartic's critical points being resolvable — the geometry the user needs is the surface
+    # and the runs, and the runs are the verified content.
+    from engine.scene import surface_layer, gradient_arrows_layer
+    field = land.field
+    domt = ((dom[0][0], dom[0][1]), (dom[1][0], dom[1][1]))
+    scene = {
+        "problem_id": "sweep", "area": "optimization", "title": f"f = {e}",
+        "domain": [list(dom[0]), list(dom[1])],
+        "layers": [surface_layer(field, domt, res=48, step=0),
+                   gradient_arrows_layer(field, domt, step=1)],
+        "quantities": [], "steps": [],
+    }
+    # an optimization descriptor so an expanded-bounds re-solve stays well-defined
+    sdesc = {"area": "optimization", "id": "sweep", "title": f"f = {e}", "expr": e,
+             "vars": ["x", "y"], "domain": dom}
+
+    def sub(m, k=40):
+        if m <= k:
+            return list(range(m))
+        return sorted({int(round(v)) for v in np.linspace(0, m - 1, k)})
+
+    runs3d = []
+    for r in sweep.value["runs"]:
+        idx = sub(len(r["points"]))
+        runs3d.append({
+            "path": [[float(r["points"][i][0]), float(r["points"][i][1]),
+                      float(r["f_values"][i])] for i in idx],
+            "basin": r["basin"],
+        })
+    basins3d = [{"position": [b["point"][0], b["point"][1], float(field.f(b["point"]))],
+                 "count": b["count"], "fraction": b["fraction"], "type": b["type"]}
+                for b in sweep.value["basins"]]
+    directive = {"type": "simulate", "kind": "descent_sweep", "runs": runs3d,
+                 "basins": basins3d, "winner": sweep.value["winner"],
+                 "n_runs": sweep.value["n_runs"], "source_quantity": sweep.name,
+                 "verified": True}
+
+    # a slim, display-only version of the sweep quantity for the trace + answer grounding
+    # (the full per-run geometry rides in the directive, not through the number-grounding gate)
+    sq = sweep.to_dict()
+    sq["value"] = {"basins": sweep.value["basins"], "winner": sweep.value["winner"],
+                   "n_runs": sweep.value["n_runs"]}
+    return ToolResult(ok=True, tool="run_simulation", area=scene.get("area", ""),
+                      descriptor=sdesc, scene=scene,
+                      quantities=[sq] + scene.get("quantities", []),
+                      directive=directive, summary=sweep.display)
+
+
 class ToolRegistry:
     """The deterministic tools available to the agent, with their Anthropic schemas."""
 
@@ -269,6 +401,30 @@ class ToolRegistry:
                 "feature": {"type": "string"},
                 "index": {"type": "integer", "default": 0},
             }, "required": ["feature"]}, _t_focus))
+        self._add(Tool(
+            "animate_motion",
+            "Play an animated, step-by-step playback of the CURRENT problem's motion in the "
+            "3-D view: a dynamical-systems trajectory flowing along the phase space, or an "
+            "optimization descent path rolling downhill. Use when the user asks to 'animate', "
+            "'play', 'watch it move', or 'run the trajectory'. Only meaningful after a problem "
+            "with a trajectory or descent path is solved; the motion replays verified data.",
+            {"type": "object", "properties": {
+                "feature": {"type": "string",
+                            "description": "optional hint, e.g. 'the trajectory', 'the descent path'"},
+            }, "required": []}, _t_animate))
+        self._add(Tool(
+            "run_simulation",
+            "Run a multi-start gradient-descent SWEEP over a landscape and report which basin "
+            "attracts the most runs, then play the actual runs back animated. Use for 'run a "
+            "simulation', 'multi-start descent', 'which basin wins', 'sweep the landscape'. "
+            "Uses the current problem's expression if none is given.",
+            {"type": "object", "properties": {
+                "expr": {"type": "string",
+                         "description": "f(x,y) to sweep; defaults to the current problem"},
+                "domain": {"type": "array", "items": {"type": "array", "items": num}},
+                "starts_per_axis": {"type": "integer", "default": 5},
+                "lr": num, "steps": {"type": "integer"},
+            }, "required": []}, _t_simulation))
 
     def _add(self, tool: Tool) -> None:
         self._tools[tool.name] = tool
@@ -288,7 +444,7 @@ class ToolRegistry:
             return ToolResult(ok=False, tool=name, error=f"no such tool: {name}")
         kwargs = dict(tool_input or {})
         try:
-            if name == "focus_view":
+            if name in ("focus_view", "animate_motion", "run_simulation"):
                 return tool.fn(ctx, **kwargs)
             return tool.fn(**kwargs)
         except TypeError as exc:

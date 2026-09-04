@@ -192,6 +192,21 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, res.to_dict() if res is not None else {"scene": None})
             return
+        if path == "/api/restore":
+            # re-open a saved session (G21): re-solve its descriptor so both the visualization
+            # and the server agent's current problem come back. Local + deterministic.
+            session = str(body.get("session") or "default")
+            desc = body.get("descriptor")
+            if not desc:
+                self._json(400, {"error": "need a descriptor to restore"})
+                return
+            try:
+                res = _agent_for(session).restore(desc)
+            except Exception as exc:
+                self._json(200, {"scene": None, "error": f"{type(exc).__name__}: {exc}"})
+                return
+            self._json(200, res.to_dict() if res is not None else {"scene": None})
+            return
         if path == "/api/ask":
             desc = CATALOG_BY_ID.get(body.get("id")) or body.get("descriptor")
             question = (body.get("question") or "").strip()

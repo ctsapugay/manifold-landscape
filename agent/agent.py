@@ -80,6 +80,7 @@ class AgentResult:
     declined: bool = False
     model_derived: bool = False
     brain: str = ""
+    descriptor: dict | None = None   # the problem descriptor, so a session can be re-opened (G21)
 
     def to_dict(self) -> dict:
         return {
@@ -88,7 +89,7 @@ class AgentResult:
             "trace": self.trace, "grounded_in": self.grounded_in,
             "grounding": self.grounding, "walkthrough": self.walkthrough,
             "declined": self.declined, "model_derived": self.model_derived,
-            "brain": self.brain,
+            "brain": self.brain, "descriptor": self.descriptor,
         }
 
 
@@ -141,9 +142,15 @@ class Agent:
         model_derived = out.model_derived
         if not g["grounded"] and quantities:
             model_derived = True
+        # Attach the trace so the tool-call view reflects a follow-up truthfully (G25): a
+        # follow-up that drove the view (a focus_view call) shows that call; one answered
+        # purely from context shows an empty call list, which the UI renders as
+        # "answered from the current problem" rather than a blank/broken panel.
+        tracer.trace.model_derived = model_derived
         return AgentResult(
             answer=out.answer, scene=None, area=desc.get("area", ""), quantities=[],
-            directives=directives, grounded_in=out.grounded_in, grounding=g,
+            directives=directives, trace=tracer.trace.to_dict(),
+            grounded_in=out.grounded_in, grounding=g,
             walkthrough=[], declined=out.declined, model_derived=model_derived,
             brain=self.brain.kind)
 
@@ -179,7 +186,7 @@ class Agent:
             answer="", scene=scene, area=scene.get("area", ""),
             quantities=scene.get("quantities", []),
             walkthrough=scene.get("lesson") or scene.get("steps", []),
-            brain=self.brain.kind)
+            brain=self.brain.kind, descriptor=new_desc)
 
     def run(self, text: str) -> AgentResult:
         ctx = {
@@ -219,7 +226,31 @@ class Agent:
             answer=out.answer, scene=out.scene, area=out.area, quantities=out.quantities,
             directives=out.directives, trace=tracer.trace.to_dict(),
             grounded_in=out.grounded_in, grounding=g, walkthrough=out.walkthrough,
-            declined=out.declined, model_derived=out.model_derived, brain=self.brain.kind)
+            declined=out.declined, model_derived=out.model_derived, brain=self.brain.kind,
+            descriptor=(self.current or {}).get("descriptor"))
+
+    def restore(self, descriptor: dict) -> AgentResult | None:
+        """Re-establish a saved session (G21): re-solve its descriptor so the session's
+        visualization comes back and the server-side agent knows the current problem again, so
+        follow-up questions still work. Deterministic and local — no model call. Returns the
+        rebuilt scene, or ``None`` if the descriptor cannot be solved."""
+        from web.problems import solve_descriptor
+        if not descriptor:
+            return None
+        try:
+            scene = solve_descriptor(descriptor)
+        except Exception:
+            return None
+        self.current = {"descriptor": descriptor, "scene": scene,
+                        "area": scene.get("area", ""),
+                        "base_domain": _base_domain(descriptor)}
+        if hasattr(self.brain, "reset"):
+            self.brain.reset()  # a re-opened session starts a fresh conversation history
+        return AgentResult(
+            answer="", scene=scene, area=scene.get("area", ""),
+            quantities=scene.get("quantities", []),
+            walkthrough=scene.get("lesson") or scene.get("steps", []),
+            brain=self.brain.kind, descriptor=descriptor)
 
 
 def _claude_available() -> bool:

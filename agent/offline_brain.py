@@ -53,6 +53,40 @@ class OfflineBrain(Brain):
                 directives=[res.directive] if res.ok and res.directive else [],
                 grounded_in=grounded)
 
+        if interp.action == "animate":
+            desc = ctx.get("current_descriptor")
+            if not desc:
+                return OrchestrationResult(
+                    answer="Solve a problem with a trajectory or descent path first, then I can "
+                           "animate its motion.", declined=True)
+            res = tracer.call("animate_motion", interp.tool_input)
+            if not res.ok:
+                return OrchestrationResult(answer=res.error, declined=True,
+                                           scene=None, area=desc.get("area", ""),
+                                           quantities=self._q(ctx))
+            motion = res.directive.get("motion", "motion")
+            noun = "trajectory" if motion == "trajectory" else "descent path"
+            answer = (f"Playing the {noun}: the moving point retraces the verified {noun} "
+                      f"step by step, so you can watch the flow unfold.")
+            return OrchestrationResult(
+                answer=answer, scene=None, area=desc.get("area", ""),
+                quantities=self._q(ctx), directives=[res.directive],
+                grounded_in=[res.directive.get("source_quantity", "")])
+
+        if interp.action == "simulate":
+            res = tracer.call("run_simulation", interp.tool_input)
+            if not res.ok:
+                return OrchestrationResult(
+                    answer=f"I couldn't run that simulation ({res.error}).", declined=True)
+            sweep_q = res.quantities[0] if res.quantities else {}
+            answer = (f"{sweep_q.get('display', 'sweep complete')}. Every run is a real "
+                      f"gradient-descent trajectory and every basin a verified minimum — watch "
+                      f"the runs play out and settle into their basins.")
+            return OrchestrationResult(
+                answer=answer, scene=res.scene, area=res.area, quantities=res.quantities,
+                directives=[res.directive], grounded_in=[sweep_q.get("name", "")],
+                walkthrough=res.scene.get("lesson") or res.scene.get("steps", []))
+
         if interp.action == "chat":
             desc = ctx.get("current_descriptor")
             if not desc:
@@ -93,7 +127,10 @@ class OfflineBrain(Brain):
 
     def answer_step(self, text: str, step: dict, ctx: dict, tracer) -> OrchestrationResult:
         """Deterministic per-step follow-up (the offline fallback for G17): the grounded
-        Explainer answers, biased to the step's own verified quantity."""
+        Explainer answers, biased to the step's own verified quantity. When the step names a
+        feature, the view is driven through the ``focus_view`` TOOL (via the tracer) rather
+        than synthesised, so a view-driving follow-up shows that call in the tool-call view
+        (G25)."""
         desc = ctx.get("current_descriptor")
         if not desc:
             return OrchestrationResult(
@@ -101,8 +138,14 @@ class OfflineBrain(Brain):
                 declined=True)
         ans = Explainer(solution_for(desc).require_verified()).answer_about(
             text, (step or {}).get("quantity"))
+        directives = []
+        feature = (step or {}).get("focus")
+        if feature:
+            fres = tracer.call("focus_view", {"feature": feature})
+            if fres.ok and fres.directive:
+                directives.append(fres.directive)
         return OrchestrationResult(
-            answer=ans["answer"], grounded_in=ans["grounded_in"],
+            answer=ans["answer"], grounded_in=ans["grounded_in"], directives=directives,
             quantities=(ctx.get("current_scene") or {}).get("quantities", []))
 
     # --- helpers ---------------------------------------------------------------

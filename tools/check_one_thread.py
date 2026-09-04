@@ -44,8 +44,11 @@ def main() -> int:
     # the step message, the user message and the agent message must all target the same thread
     for fn in ("function pushUserMsg", "function pushAgentMsg", "function appendStepMsg"):
         start = js.find(fn)
-        if start != -1 and "threadEl.appendChild" not in js[start:start + 700]:
-            errs.append(f"{fn.split()[1]} does not append into the shared thread")
+        if start != -1:
+            nxt = js.find("\nfunction ", start + len(fn))
+            body = js[start:nxt if nxt != -1 else start + 900]
+            if "threadEl.appendChild" not in body:
+                errs.append(f"{fn.split()[1]} does not append into the shared thread")
 
     if errs:
         for e in errs:

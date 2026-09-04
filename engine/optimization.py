@@ -115,6 +115,94 @@ class OptimizationLandscape:
             ),
         )
 
+    # --- multi-start sweep (a simulation over the landscape) --------------------
+
+    def descent_sweep(
+        self, starts: Sequence[Sequence[float]], lr: float, steps: int,
+        name: str = "descent_sweep",
+    ) -> Quantity:
+        """Run gradient descent from many starting points and tally which basin each lands in.
+
+        This is the *simulation* behind G23: it does not invent an outcome, it computes one.
+        Every run is a real gradient-descent trajectory (verified non-increasing, exactly as
+        ``gradient_descent`` above); each run's landing point is refined to the true local
+        minimum it fell into with the engine's verified ``minimum`` (∇f≈0, Hessian classified);
+        runs that refine to the same minimum (to a tolerance) form one basin, and the per-basin
+        counts are a straight tally of those verified landings — so the reported "which basin
+        wins" traces entirely to verified computation (C-VERIFIED-MOTION, C-VERIFIED-MATH).
+
+        Verification: the residual is the worst, across all runs, of the descent's step-over-
+        step increase and the refined minimum's gradient norm — so a pass certifies every run
+        genuinely descended and every basin is a genuine critical point, which is what the
+        tally rests on.
+        """
+        runs = []
+        basins: list[dict] = []
+        worst_increase = 0.0
+        worst_grad = 0.0
+
+        def basin_index_for(point) -> int:
+            for i, b in enumerate(basins):
+                if float(np.linalg.norm(np.asarray(point) - np.asarray(b["point"]))) < 1e-3:
+                    b["count"] += 1
+                    return i
+            return -1
+
+        for s in starts:
+            dq = self.gradient_descent(s, lr, steps)
+            v = dq.value
+            worst_increase = max(worst_increase, dq.verification.residual)
+            end = v["final_point"]
+            mq = self.minimum(end)                       # verified refinement to the true min
+            worst_grad = max(worst_grad, mq.verification.residual)
+            mpt = mq.value["point"]
+            bi = basin_index_for(mpt)
+            if bi == -1:
+                basins.append({"point": [float(c) for c in mpt], "f": float(mq.value["f"]),
+                               "type": mq.value["type"], "count": 1})
+                bi = len(basins) - 1
+            runs.append({
+                "start": [float(c) for c in s],
+                "points": v["points"],
+                "f_values": v["f_values"],
+                "final_point": [float(c) for c in end],
+                "basin": bi,
+            })
+
+        n = len(runs)
+        for b in basins:
+            b["fraction"] = b["count"] / n if n else 0.0
+        order = sorted(range(len(basins)), key=lambda i: basins[i]["count"], reverse=True)
+        winner = order[0] if basins else -1
+        resid = max(worst_increase, worst_grad)
+
+        def _pt(p):
+            return "(" + ", ".join(f"{c:.3g}" for c in p) + ")"
+        if basins:
+            w = basins[winner]
+            disp = (f"{n} runs → {len(basins)} basin(s); "
+                    f"basin at {_pt(w['point'])} attracted {w['count']}/{n} "
+                    f"({100 * w['fraction']:.0f}%)")
+        else:
+            disp = f"{n} runs, no basin resolved"
+
+        return Quantity(
+            name=name,
+            kind="sweep",
+            value={
+                "runs": runs, "basins": basins, "winner": winner, "n_runs": n,
+                "lr": float(lr), "steps": int(steps),
+            },
+            display=disp,
+            provenance="engine.optimize.gradient_descent",
+            verification=Verification.from_residual(
+                "every run a valid descent (non-increasing) landing at a verified minimum (∇f≈0)",
+                resid, 1e-6,
+                detail=f"{n} runs, worst step-increase {worst_increase:.1e}, "
+                       f"worst ‖∇f‖ at a basin {worst_grad:.1e}",
+            ),
+        )
+
     def solve_descent(
         self, problem_id: str, title: str, start, lr: float, steps: int
     ) -> Solution:

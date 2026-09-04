@@ -95,7 +95,10 @@ class ClaudeBrain(Brain):
             aug = (f'[Context: the user is looking at the walkthrough step "{step["title"]}"{about}. '
                    f'Answer their question about THIS step, grounded ONLY in these verified '
                    f'values — {facts or "(the current problem\'s verified results)"} — and do not '
-                   f'introduce any number a tool did not produce.]\n\n{text}')
+                   f'introduce any number a tool did not produce. The problem is ALREADY solved '
+                   f'and its visualization is on screen: do NOT call any solve_ tool (that would '
+                   f'recompute the scene and disturb the walkthrough); at most call focus_view to '
+                   f'point at a feature of the current problem.]\n\n{text}')
         out = self.orchestrate(aug, ctx, tracer)
         # a follow-up answered from context calls no tools and solves nothing — that is not a
         # decline. It is declined only if no answer text came back at all.
