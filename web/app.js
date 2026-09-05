@@ -131,6 +131,16 @@ let fades = [];                        // {ents, t0, dur} — field/grid layers 
 const DRAW_DUR = 4200;
 const FADE_DUR = 1300;
 const GROW_DUR = 1100;
+// A long curve (a Lorenz trajectory has thousands of points) should draw on and play back
+// PROPORTIONALLY longer than a short one (a descent), so the eye can actually follow the
+// wavefront / the moving point — capped at both ends. A surface keeps a fixed, gentle grow.
+const SURFACE_DRAW_DUR = 5200;
+const MS_PER_POINT = 3.2;              // time budget per curve vertex, for draw-on and playback
+const CURVE_DRAW_MIN = 4200, CURVE_DRAW_MAX = 16000;
+const PLAY_MIN = 5500, PLAY_MAX = 16000;
+const _clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const curveDrawDur = (count) => _clamp(count * MS_PER_POINT, CURVE_DRAW_MIN, CURVE_DRAW_MAX);
+const playDur = (count) => _clamp(count * MS_PER_POINT, PLAY_MIN, PLAY_MAX);
 
 // tutor-driven view: an eased focus target + a pulsing highlight marker (criterion G5)
 let focusTarget = null;      // THREE.Vector3 the controls ease toward
@@ -150,6 +160,8 @@ const V = (p) => new THREE.Vector3(p[0], p[1], (p[2] || 0) * zScale);
 let motionGroup = new THREE.Group();
 scene.add(motionGroup);
 let motionAnim = [];          // {marker, pts:[Vector3], t0, dur, trailGeom?} — active playbacks
+let motionHiddenLayers = [];  // scene layers hidden during a playback (restored on clear)
+let lastPlayback = null;      // the last thing that played, so Replay can re-run it
 const RUN_COLORS = [0x4fd6c9, 0xffb454, 0xe06c9f, 0x7aa2f7, 0x9ece6a, 0xf7768e, 0xbb9af7];
 
 function clearMotion() {
@@ -161,40 +173,63 @@ function clearMotion() {
   motionGroup = new THREE.Group();
   scene.add(motionGroup);
   motionAnim = [];
+  // restore any scene layer we hid to draw a clean trail over its place
+  for (const e of motionHiddenLayers) if (e.object) e.object.visible = e.step <= currentStep;
+  motionHiddenLayers = [];
 }
-function _marker(color, radius) {
-  return new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 16),
-                        new THREE.MeshBasicMaterial({ color }));
+// Hide the static scene polyline a playback traces, so the moving point draws a clean trail
+// over its place instead of a second line z-fighting the first (the flicker Clara saw).
+function hideSceneLayer(layerId) {
+  if (!layerId) return;
+  const e = layerObjects.find((l) => l.id === layerId);
+  if (e && e.object && e.object.visible) { e.object.visible = false; motionHiddenLayers.push(e); }
 }
-// Play one path: a marker travels it while the curve draws on behind it (G22).
-function animatePath(path, { color = 0xffd166, dur = 4200 } = {}) {
+function _marker(color, radius, halo = false) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(radius, 20, 20),
+                           new THREE.MeshBasicMaterial({ color }));
+  if (halo) {  // a soft glow so the point reads clearly while it moves slowly
+    m.add(new THREE.Mesh(new THREE.SphereGeometry(radius * 1.9, 16, 16),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.22 })));
+  }
+  return m;
+}
+// Play one path: a marker travels it, slowly, while the curve draws on behind it (G22). The
+// duration scales with the path length so a long trajectory is watchable, not a blur.
+function animatePath(path, { color = 0xffd166, layerId = null } = {}) {
   clearMotion();
   const pts = (path || []).map(V);
   if (pts.length < 2) return;
+  hideSceneLayer(layerId);
   const trailGeom = new THREE.BufferGeometry().setFromPoints(pts);
   trailGeom.setDrawRange(0, 2);
   motionGroup.add(new THREE.Line(trailGeom,
-    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.85 })));
-  const marker = _marker(color, 0.2);
+    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.95 })));
+  const marker = _marker(color, 0.22, true);
   marker.position.copy(pts[0]);
   motionGroup.add(marker);
-  motionAnim.push({ marker, pts, t0: performance.now(), dur, trailGeom });
+  motionAnim.push({ marker, pts, t0: performance.now(), dur: playDur(pts.length), trailGeom });
+  lastPlayback = { kind: "path", path, color, layerId };
+  showReplay();
 }
-// Play a whole sweep: every run's actual path, a marker per run coloured by basin, and a
-// resting marker at each verified basin sized by how many runs it caught (G23).
-function animateRuns(runs, basins, { dur = 3600 } = {}) {
+// Play a whole sweep: every run's actual path traced by a moving point, coloured by basin,
+// with a resting marker at each verified basin sized by how many runs it caught (G23). Slow
+// enough to watch the points roll into their basins.
+function animateRuns(runs, basins, {} = {}) {
   clearMotion();
+  let maxLen = 2;
   for (const run of runs || []) {
     const pts = (run.path || []).map(V);
     if (pts.length < 2) continue;
+    maxLen = Math.max(maxLen, pts.length);
     const col = RUN_COLORS[run.basin % RUN_COLORS.length];
-    const geo = new THREE.BufferGeometry().setFromPoints(pts);
-    motionGroup.add(new THREE.Line(geo,
-      new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.28 })));
-    const marker = _marker(col, 0.1);
+    const trailGeom = new THREE.BufferGeometry().setFromPoints(pts);
+    trailGeom.setDrawRange(0, 2);
+    motionGroup.add(new THREE.Line(trailGeom,
+      new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.5 })));
+    const marker = _marker(col, 0.12);
     marker.position.copy(pts[0]);
     motionGroup.add(marker);
-    motionAnim.push({ marker, pts, t0: performance.now(), dur });
+    motionAnim.push({ marker, pts, t0: performance.now(), dur: playDur(pts.length), trailGeom });
   }
   (basins || []).forEach((b, i) => {
     const col = RUN_COLORS[i % RUN_COLORS.length];
@@ -205,6 +240,8 @@ function animateRuns(runs, basins, { dur = 3600 } = {}) {
     ring.position.copy(s.position);
     motionGroup.add(s); motionGroup.add(ring);
   });
+  lastPlayback = { kind: "runs", runs, basins };
+  showReplay();
 }
 
 // viridis-ish colormap
@@ -458,7 +495,7 @@ function buildScene(data) {
     obj.userData.step = layer.step;
     obj.userData.isField = layer.type === "vectors" && FIELD_IDS.has(layer.id);
     contentGroup.add(obj);
-    const entry = { object: obj, step: layer.step, type: layer.type, wasVisible: false };
+    const entry = { object: obj, step: layer.step, type: layer.type, id: layer.id, wasVisible: false };
     layerObjects.push(entry);
     if (layer.type === "surface") {
       surfaceLayerObj = entry; surfaceGroup = obj;
@@ -471,6 +508,9 @@ function buildScene(data) {
   maxStep = layerObjects.reduce((m, l) => Math.max(m, l.step), 0);
   setStep(maxStep); // reveals every layer and triggers its entrance animation
   frameScene(false); // snap to a good first framing, then let steps ease from here
+  // the scene just drew itself on; Replay can re-run that draw-on
+  lastPlayback = { kind: "draw" };
+  showReplay();
 }
 
 // collect every material under an object, remembering its base opacity + transparent flag
@@ -505,14 +545,24 @@ function fadeOut(obj, done) {
 // A shape (surface, mesh, curve) draws itself on: reveal its geometry progressively via
 // drawRange — the same mechanism whether it's a line's vertices or a surface's triangles.
 function triggerDraw(object) {
-  const geoms = new Set();
-  object.traverse((o) => { if ((o.isLine || o.isMesh) && o.geometry) geoms.add(o.geometry); });
-  for (const geom of geoms) {
+  const seen = new Set();
+  const geoms = [];
+  object.traverse((o) => {
+    if ((o.isLine || o.isMesh) && o.geometry && !seen.has(o.geometry)) {
+      seen.add(o.geometry);
+      geoms.push({ geom: o.geometry, isLine: !!o.isLine });
+    }
+  });
+  for (const { geom, isLine } of geoms) {
     const count = geom.index ? geom.index.count : ((geom.getAttribute("position") || {}).count || 0);
     if (!count) continue;
+    // a curve draws vertex-by-vertex, so its time scales with its length; a surface grows
+    // from its centre at a fixed gentle pace.
+    const posCount = (geom.getAttribute("position") || {}).count || count;
+    const dur = isLine ? curveDrawDur(posCount) : SURFACE_DRAW_DUR;
     for (let i = drawAnim.length - 1; i >= 0; i--) if (drawAnim[i].geom === geom) drawAnim.splice(i, 1);
     geom.setDrawRange(0, 2);
-    drawAnim.push({ geom, count, t0: performance.now(), dur: DRAW_DUR });
+    drawAnim.push({ geom, count, t0: performance.now(), dur });
   }
 }
 
@@ -581,6 +631,9 @@ function setStep(k) {
   for (const l of layerObjects) {
     let vis = l.step <= currentStep;
     if (fieldHidden && l.object.userData.isField) vis = false;
+    // a layer whose curve a playback is currently tracing stays hidden (the trail stands in
+    // for it) so we never draw two coincident lines that z-fight and flicker
+    if (motionHiddenLayers.includes(l)) vis = false;
     l.object.visible = vis;
     // each layer plays its entrance the moment it is first revealed
     if (vis && !l.wasVisible) revealAnim(l);
@@ -662,6 +715,7 @@ const errorEl = $("error");
 const brainBadge = $("brain-badge");
 const tracePanel = $("trace-panel");
 const traceToggle = $("trace-toggle");
+const replayBtn = $("replay-btn");
 const fieldToggle = $("field-toggle");
 const contourToggle = $("contour-toggle");
 const launcher = $("launcher");
@@ -917,8 +971,21 @@ function applyMotionDirectives(directives) {
   const anim = list.find((d) => d && d.type === "animate");
   const foc = list.find((d) => d && d.type === "focus" && Array.isArray(d.target));
   if (sim) { animateRuns(sim.runs || [], sim.basins || []); fitCamera(); }
-  else if (anim) { animatePath(anim.path || []); }
+  else if (anim) { animatePath(anim.path || [], { layerId: anim.layer }); }
   else if (foc) { focusOn(foc.target, 0.55); }
+}
+
+// --- replay (re-run the last playback: a motion, a sweep, or the scene's draw-on) ----------
+function showReplay() { if (replayBtn) replayBtn.hidden = false; }
+function replayLast() {
+  if (!lastPlayback) return;
+  if (lastPlayback.kind === "path") {
+    animatePath(lastPlayback.path, { color: lastPlayback.color, layerId: lastPlayback.layerId });
+  } else if (lastPlayback.kind === "runs") {
+    animateRuns(lastPlayback.runs, lastPlayback.basins); fitCamera();
+  } else {  // "draw": re-run the whole scene's draw-on from the current step
+    clearMotion(); startDrawIn(); setStep(currentStep);
+  }
 }
 
 // An orchestration command mid-session (animate / simulate): routed through the agent's
@@ -943,6 +1010,7 @@ function newChat() {
   sessionActive = false; lessonSteps = []; stepCursor = -1; curScene = null; curDescriptor = null;
   dock.hidden = true; dockTab.hidden = true; newChatBtn.hidden = true; boundsEl.hidden = true;
   fieldToggle.hidden = true; contourToggle.hidden = true; traceToggle.hidden = true; tracePanel.hidden = true;
+  replayBtn.hidden = true; lastPlayback = null;
   clearContent(); clearMotion();
   thread = []; threadEl.innerHTML = ""; suggestionsEl.innerHTML = "";
   launcher.hidden = false; launchNote.hidden = true; launchInput.value = "";
@@ -1124,6 +1192,7 @@ contourToggle.onclick = () => {
   const lbl = contourToggle.querySelector(".label");
   if (lbl) lbl.textContent = toContour ? "Surface" : "Contours";
 };
+replayBtn.onclick = () => replayLast();
 traceToggle.onclick = () => {
   const show = tracePanel.hidden;
   tracePanel.hidden = !show;
